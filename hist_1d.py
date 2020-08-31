@@ -37,16 +37,21 @@ class Hist1D():
         '''add histogram data to existing histogram'''
         
         if isinstance(hist_to_add,Hist1D):
+            #To do: check if bins are the same
             h = hist_to_add.data['n'].values
         else:
-            #for now, we assume hist_to_add is either and xarray, or a numpy array
+            # for now, we assume hist_to_add is either and xarray, or a numpy array
+            # takes bin match up on faith!
+            #to do: for the xarray case, chould add code to check bins
             try:
+                # checks for .dat in structure -- assumes this is the right  thing to add.
+                
                 h = hist_to_add.dat
             except:
                 h = hist_to_add
 
         if type(h) is not np.ndarray:
-            print('array to add must be xarray or numpy array')
+            print('array to add must be a Hist!d object, an xarray or a numpy array')
             raise(ValueError)
 
         self.data['n']=self.data['n'] + h
@@ -92,61 +97,15 @@ class Hist1D():
             z1 = x1+diff
 
         z1[self.data['n'].values < 10.0] = np.nan
-        
-        '''fig = plt.figure(figsize=(8,5))
-        ax = fig.add_subplot(111)
-        ax.plot(x1,z1)
-        ax.set_xlim((0,50))
-        ax.set_ylim((0,50))'''
 
-
-        '''additive_correction = z1-x1
-        multiplicative_correction = z1/x1
-
-        fig = plt.figure(figsize=(8,5))
-        ax = fig.add_subplot(111)
-        ax.plot(x1,additive_correction)
-
-        fig = plt.figure(figsize=(8,5))
-        ax = fig.add_subplot(111)
-        ax.plot(x1,multiplicative_correction)
-
-        
-
-        plt.show()
-
-        print'''
         return x1,z1
 
-
-
-
-  
     def plot(self, fig = None, ax = None, title=None, xtitle=None, ytitle=None,label=None,semilog=False):
 
         import matplotlib.pyplot as plt
         import matplotlib.colors as colors
         import numpy as np
-        import copy
-        import sys
 
-        sys.path.append('C:/job_CCMP/python/eval_ncep_monthly_bias/')
-        sys.path.append('C:/job_CCMP/python/plotting_and_analysis/')
-        sys.path.append('C:/job_CCMP/python/binned_stats/')
-        sys.path.append('C:/job_CCMP/python/map_stats/')
-        sys.path.append('C:/job_CCMP/python/ncep/')
-        sys.path.append('C:/job_CCMP/python/eval_era5/')
-        sys.path.append('C:/job_CCMP/python/era5/')
-        sys.path.append('C:/job_CCMP/python/buoys/')
-        sys.path.append('B:/job_CCMP/python/bytemaps/')
-        sys.path.append('B:/job_CCMP/python/quikscat/')
-        sys.path.append('B:/job_CCMP/python/ascat/')
-        sys.path.append('B:/job_CCMP/python/ssmi/')
-        sys.path.append('B:/job_CCMP/python/ssmis/')
-        sys.path.append('B:/job_CCMP/python/amsre/')
-        sys.path.append('B:/job_CCMP/python/amsr2/')
-        sys.path.append('B:/job_CCMP/python/windsat/')
-        sys.path.append('../')
 
         if label is None:
             label = self.name
