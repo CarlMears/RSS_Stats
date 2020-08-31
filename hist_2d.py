@@ -70,6 +70,9 @@ class Hist2D():
     def add(self,hist_to_add):
         '''add histogram data to existing histogram'''
 
+
+        
+
         #for now, we assume hist_to_add is either an xarray, or a numpy array
         try:
             h = hist_to_add.values
@@ -124,8 +127,8 @@ class Hist2D():
                                                     bins=[self.num_xbins,self.num_ybins],
                                                     range=[[self.min_xval, self.max_xval],
                                                            [self.min_yval, self.max_yval]])
-        # because num_bins and ranges are from self, the resulting hist_to_add is automatically compatible.
 
+        # because num_bins and ranges are from self, the resulting hist_to_add is automatically compatible.
         self.add(hist_to_add)
 
     def to_netcdf(self,filename = None):
@@ -135,17 +138,24 @@ class Hist2D():
 
         self.data.to_netcdf(path  = filename)
 
-    def from_netcdf(nc_file = None,xname='',xunits='',yname='',yunits=''):
+    def from_netcdf(nc_file = None,var = 'w',compare_sat=None,xname='',xunits='',yname='',yunits=''):
 
         try:
             ds = xr.open_dataset(nc_file)
         except:
             return np.nan
 
-        xedges   = ds['xedges']
-        xcenters = ds['xcenters'] 
-        yedges   = ds['yedges']
-        ycenters = ds['ycenters'] 
+        if var in ['w']:
+            xedges   = ds['xedges_spd']
+            xcenters = ds['xcenters_spd'] 
+            yedges   = ds['yedges_spd']
+            ycenters = ds['ycenters_spd'] 
+        elif var in['u','v']:
+            xedges   = ds['xedges_vec']
+            xcenters = ds['xcenters_vec'] 
+            yedges   = ds['yedges_vec']
+            ycenters = ds['ycenters_vec'] 
+
         min_xval = np.nanmin(xedges)
         max_xval = np.nanmax(xedges)
         min_yval = np.nanmin(yedges)
@@ -157,7 +167,8 @@ class Hist2D():
                       num_ybins = num_ybins,min_yval = min_yval,max_yval= max_yval,
                       xname=xname,xunits=xunits,yname=xname,yunits=yunits)
 
-        z = ds['n']
+        varname = f"n_{var}_ccmp_{compare_sat}"
+        z = ds[varname]
 
         self.add(z)
 
