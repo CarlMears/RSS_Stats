@@ -93,20 +93,31 @@ class MapStat():
         
         return u_map_stats,v_map_stats,w_map_stats
 
-        
+    def compatible(self,self2):
+                #make sure maps are compatible
+        maps_compatible = True
+        if isinstance(self2,MapStat):
+            attr_to_check = ['num_lats','num_lons','max_lat','min_lat','max_lon','min_lon']
+            for attr in attr_to_check:
+                try:
+                    if get_attr(self,attr) != get_attr(self2,attr):
+                        maps_compatible = False
+                except KeyError:
+                    maps_compatible = False
+        else:
+            maps_compatible=False
+
+        return maps_compatible
 
     def combine(self,self2):
 
         #make sure maps are compatible
         try:
-            assert(isinstance(self2,MapStat))
-            assert(self.num_lats == self2.num_lats)
-            assert(self.num_lons == self2.num_lons)
-            assert(self.max_lat == self2.max_lat) 
-            assert(self.min_lat == self2.min_lat)
-            assert(self.max_lon == self2.max_lon) 
-            assert(self.min_lon == self2.min_lon)
+            maps_compatible = self.maps_compatible(self2)
         except:
+            raise ValueError('Map objects not compatible, can not combine')
+
+        if not maps_compatible:
             raise ValueError('Map objects not compatible, can not combine')
 
         self.num = self.num + self2.num
@@ -116,10 +127,19 @@ class MapStat():
 
     def add_map(self,map):
 
+        # this routine adds data from a lat/lon array of values
+
         sz = map.shape
-        assert(len(sz)==2)
-        assert(sz[0] == self.num_lats)
-        assert(sz[1] == self.num_lons)
+        map_compatible = True
+        if len(sz)!=2:
+            map_compatible = False
+        if sz[0] != self.num_lats:
+            map_compatible = False
+        if sz[1] != self.num_lons:
+            map_compatible = False
+        
+        if not map_compatible:
+            raise ValueError('map size not compatible, can not be added')
 
         # if we get to here, then the arrays are the same size
 
@@ -130,9 +150,9 @@ class MapStat():
         ok_map = np.zeros((sz))
         ok = np.isfinite(map)
 
-        self.num[ok] = self.num[ok] + 1
-        self.tot[ok] = self.tot[ok] + map[ok]
-        self.totsqr[ok] = self.totsqr[ok] + np.square(map[ok])
+        self.num[ok] += 1
+        self.tot[ok] += map[ok]
+        self.totsqr[ok] += np.square(map[ok])
 
     def num_obs(self):
         return self.num
@@ -142,14 +162,18 @@ class MapStat():
         return mean_map
 
     def variance(self):
-        mean_map = self.tot/self.num
-        variance_map = self.totsqr/self.num - np.square(mean_map)
-        variance_map[self.num < 3] = np.nan 
+        #mean_map = self.tot/self.num
+        #variance_map = self.totsqr/self.num - np.square(mean_map)
+        #variance_map[self.num < 3] = np.nan 
+        mean_map = np.full_like(self.tot, np.nan)
+        variance_map = np.full_like(self.tot, np.nan)
+        np.divide(self.tot, self.num, out=mean_map, where=self.num > 2)
+        np.divide(self.totsqr, self.num, out=variance_map, where=self.num > 2)
+        variance_map -= np.square(mean_map) 
         return variance_map
 
     def stddev(self):
-        stddev_map = np.sqrt(self.variance())
-        return stddev_map
+        return np.sqrt(self.variance())
 
     def zonal_sum(self):
         zonal_num = np.sum(self.num,axis=1)
