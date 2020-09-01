@@ -37,8 +37,8 @@ class Hist1D():
         '''add histogram data to existing histogram'''
         
         if isinstance(hist_to_add, Hist1D):
-            #To do: check if bins are the same
-            h = hist_to_add.data['n'].values
+            # if it is a Hist1D instance, use the existing combine method.
+            self.combine(hist_to_add)
         else:
             # for now, we assume hist_to_add is either and xarray, or a numpy array
             # takes bin match up on faith!

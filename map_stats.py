@@ -159,6 +159,8 @@ class MapStat():
 
     def mean(self):
         mean_map = self.tot/self.num
+        np.divide(self.tot, self.num, out=mean_map, where=self.num > 0)
+        #mean_map = np.full_like(self.tot, np.nan)
         return mean_map
 
     def variance(self):

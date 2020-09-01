@@ -268,9 +268,8 @@ class BinnedStat():
                             xrng = [self.xbin_edges[0],self.xbin_edges[-1]])
         
         return binned_stats
-
     
-    def plt(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', requirement=None,
+    def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', requirement=None,
                       plot_num_in_bins=False, num_thres=0):
         import numpy as np
         import xarray as xr

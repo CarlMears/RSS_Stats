@@ -192,20 +192,6 @@ class Hist2D():
     def as_dataset(self):
         return self.data
 
-    #plt == plot
-    def plt(self, title='', xtitle=None, ytitle=None, 
-             aspect='equal', plot_diagonal=True, 
-             plot_vert_medians=False,
-             plot_horiz_medians=False,
-             rangex = None,rangey= None):
-        
-        fig, ax = self.plot(title=title, xtitle=xtitle, ytitle=ytitle, 
-             aspect=aspect, plot_diagonal=plot_diagonal, 
-             plot_vert_medians=plot_vert_medians,
-             plot_horiz_medians=plot_horiz_medians,
-             rangex = rangex,rangey= rangex)
-        return fig, ax
-
     def plot(self, title='', xtitle=None, ytitle=None, 
              aspect='equal', plot_diagonal=True, 
              plot_vert_medians=False,
