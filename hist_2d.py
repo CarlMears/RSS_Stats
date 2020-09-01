@@ -83,36 +83,35 @@ class Hist2D():
             print('array to add must be xarray or numpy array')
             raise(ValueError)
 
-        self.data['n']=self.data['n'] + h
+        self.data['n']+= h
 
-    def coords_compatible(self,z):
+    def compatible(self,z):
 
         '''checks to make x and y cooordinates are the same
             returns True if so
             returns False if not compatible, or if z is not an
             instance of the Hist2D class '''
+        hist_compatible = True
+        
+        if isinstance(z,Hist2D):
+            attr_to_check = ['num_xbins','num_ybins','min_xval','max_xval','min_yval','max_yval']
+            for attr in attr_to_check:
+                try:
+                    if getattr(self,attr) != getattr(z,attr):
+                        hist_compatible = False
+                except KeyError:
+                    hist_compatible = False  #missing critical key
+        else:
+            hist_compatible = False
 
-        try:
-            assert(isinstance(z,Hist2D))
-            assert(self.num_xbins == z.num_xbins)
-            assert(self.num_ybins == z.num_ybins)
-            assert(self.min_xval  == z.min_xval)
-            assert(self.max_xval  == z.max_xval)
-            assert(self.min_yval  == z.min_yval)
-            assert(self.max_yval  == z.max_yval)
-        except:
-            return False
-
-        return True
+        return hist_compatible
 
     def combine(self,hist_to_add):
         '''combines two histograms by adding the number in  each  bin
            checks to make sure histograms are compatible -- if not raises 
            ValueError'''
-        try:
-            assert(self.coords_compatible(hist_to_add))
-        except:
-            raise ValueError('Var to combine not compatible')
+        if  not self.compatible(hist_to_add):
+            raise ValueError('histogram to combine not compatible')
 
         h = hist_to_add.data['n']
         self.add(h)
@@ -138,7 +137,7 @@ class Hist2D():
 
         self.data.to_netcdf(path  = filename)
 
-    def from_netcdf(nc_file = None,var = 'w',compare_sat=None,xname='',xunits='',yname='',yunits=''):
+    def from_netcdf(nc_file = None,varname = None,var = 'w',compare_sat=None,xname='',xunits='',yname='',yunits=''):
 
         try:
             ds = xr.open_dataset(nc_file)
@@ -167,7 +166,9 @@ class Hist2D():
                       num_ybins = num_ybins,min_yval = min_yval,max_yval= max_yval,
                       xname=xname,xunits=xunits,yname=xname,yunits=yunits)
 
-        varname = f"n_{var}_ccmp_{compare_sat}"
+        if varname is None:
+            varname = f"n_{var}_ccmp_{compare_sat}"
+
         z = ds[varname]
 
         self.add(z)
@@ -190,6 +191,20 @@ class Hist2D():
 
     def as_dataset(self):
         return self.data
+
+    #plt == plot
+    def plt(self, title='', xtitle=None, ytitle=None, 
+             aspect='equal', plot_diagonal=True, 
+             plot_vert_medians=False,
+             plot_horiz_medians=False,
+             rangex = None,rangey= None):
+        
+        fig, ax = self.plot(title=title, xtitle=xtitle, ytitle=ytitle, 
+             aspect=aspect, plot_diagonal=plot_diagonal, 
+             plot_vert_medians=plot_vert_medians,
+             plot_horiz_medians=plot_horiz_medians,
+             rangex = rangex,rangey= rangex)
+        return fig, ax
 
     def plot(self, title='', xtitle=None, ytitle=None, 
              aspect='equal', plot_diagonal=True, 
@@ -218,7 +233,7 @@ class Hist2D():
                                 nbins=self.num_xbins, 
                                 z1_range=rangex,
                                 z2_range=rangey, 
-                                aspect='equal', plot_diagonal=plot_diagonal,
+                                aspect=aspect, plot_diagonal=plot_diagonal,
                                 plot_horiz_medians=plot_horiz_medians,plot_vert_medians = plot_vert_medians)
         return fig, ax
 

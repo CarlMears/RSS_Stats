@@ -36,23 +36,19 @@ class Hist1D():
     def add(self,hist_to_add):
         '''add histogram data to existing histogram'''
         
-        if isinstance(hist_to_add,Hist1D):
+        if isinstance(hist_to_add, Hist1D):
             #To do: check if bins are the same
             h = hist_to_add.data['n'].values
         else:
             # for now, we assume hist_to_add is either and xarray, or a numpy array
             # takes bin match up on faith!
             #to do: for the xarray case, chould add code to check bins
-            try:
-                # checks for .dat in structure -- assumes this is the right  thing to add.
-                
-                h = hist_to_add.dat
-            except:
+            if type(hist_to_add) is np.ndarray:
                 h = hist_to_add
-
-        if type(h) is not np.ndarray:
-            print('array to add must be a Hist!d object, an xarray or a numpy array')
-            raise(ValueError)
+            elif isinstance(hist_to_add,xr.DataArray):
+                h = hist_to_add.data
+            else:
+                h = hist_to_add  # this  is the hail mary case
 
         self.data['n']=self.data['n'] + h
 
@@ -63,9 +59,83 @@ class Hist1D():
                                         range=[self.min_xval, self.max_xval])
         self.add(hist_to_add)
 
+    def compatible(self,z):
+
+        '''checks to make x and y cooordinates are the same
+            returns True if so
+            returns False if not compatible, or if z is not an
+            instance of the Hist2D class '''
+        hist_compatible = True
+        
+        if isinstance(z,Hist1D):
+            attr_to_check = ['num_xbins','min_xval','max_xval']
+            for attr in attr_to_check:
+                try:
+                    if getattr(self,attr) != getattr(z,attr):
+                        hist_compatible = False
+                except KeyError:
+                    hist_compatible = False  #missing critical key
+        else:
+            hist_compatible = False
+
+        return hist_compatible
+
+    def combine(self,self2):
+
+        #make sure maps are compatible
+        try:
+            hists_compatible = self.compatible(self2)
+        except:
+            raise ValueError('Hist1D objects not compatible, can not combine')
+
+        if not hists_compatible:
+            raise ValueError('Hist1D objects not compatible, can not combine')
+
+        hist_to_add = self2.data['n']
+        self.add(hist_to_add)
+
     def to_netcdf(self,filename = None):
 
         self.data.to_netcdf(path  = filename)
+
+    def from_netcdf(nc_file = None,varname = None,name='',units='m/s'):
+
+        try:
+            ds = xr.open_dataset(nc_file)
+        except:
+            return np.nan
+
+        
+
+        if '_w_' in varname:
+            xedges   = ds['xedges_spd']
+            xcenters = ds['xcenters_spd'] 
+        elif (('_u_' in varname) or ('_v_' in varname)):
+            xedges   = ds['xedges_vec']
+            xcenters = ds['xcenters_vec'] 
+        else:
+            print('Warning -- var type no understood - assuming scalar')
+            xedges   = ds['xedges_spd']
+            xcenters = ds['xcenters_spd'] 
+
+        min_xval = np.nanmin(xedges)
+        max_xval = np.nanmax(xedges)
+        num_xbins = (xcenters.shape)[0]
+
+        if name is None:
+            name=varname
+        self = Hist1D(num_xbins = num_xbins,min_xval = min_xval,max_xval=max_xval,
+                 name=name,units=units)
+
+
+        if varname is None:
+            varname = f"n_{var}_ccmp_{compare_sat}"
+            
+        z = ds[varname]
+
+        self.add(z)
+
+        return self
 
     def match_to(self,hist_to_match,attenuate_near_zero = False,atten_thres = 5.0):
         '''constructs an additive matching function that when added to the data that resulted in the histogram in self, with result in a
@@ -154,10 +224,8 @@ class Hist1D():
             ax.set_xlim(self.min_xval,self.max_xval)
         
         ax.legend(loc='best',fontsize=13)
-        if created_fig:
-            return fig,ax
-        else:
-            return ax
+
+        return fig,ax
 
 if __name__ == '__main__':
 
