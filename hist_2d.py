@@ -6,13 +6,15 @@
 import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from plot_2d_hist import plot_2d_hist,averages_from_histograms
 
 class Hist2D():
     
 
     def __init__(self,num_xbins = 200,min_xval = -10.0,max_xval=10.0,
                       num_ybins = None,min_yval = None,max_yval=None,
-                      xname='',xunits='',yname='',yunits=None):
+                      xname='',xunits='',yname='',yunits=None,no_var=False):
         self.num_xbins = num_xbins
         self.min_xval = min_xval
         self.max_xval = max_xval
@@ -42,7 +44,6 @@ class Hist2D():
         self.size_ybin = (self.max_yval - self.min_yval)/self.num_ybins
 
         # calculate bin edges and bin centers
-
         xedges = self.min_xval + np.arange(0,self.num_xbins+1)*self.size_xbin
         yedges = self.min_yval + np.arange(0,self.num_ybins+1)*self.size_ybin
 
@@ -54,8 +55,8 @@ class Hist2D():
         self.xcenters = xcenters
         self.ycenters = ycenters
 
-        self.data = xr.Dataset(
-            data_vars = {'n' : (('ycenters','xcenters'),np.zeros((self.num_ybins,self.num_xbins),dtype = np.float32))},
+        if no_var:
+            self.data = xr.Dataset(
             coords = {'xcenters' : xcenters,
                       'ycenters' : ycenters,
                       'xedges'   : xedges,
@@ -66,16 +67,26 @@ class Hist2D():
                       'hist_2d_yname':self.yname,
                       'hist_2d_xedges':self.xedges,
                       'hist_2d_yedges':self.yedges}) 
+        else:
+            self.data = xr.Dataset(
+                data_vars = {'n' : (('ycenters','xcenters'),np.zeros((self.num_ybins,self.num_xbins),dtype = np.float32))},
+                coords = {'xcenters' : xcenters,
+                        'ycenters' : ycenters,
+                        'xedges'   : xedges,
+                        'yedges'   : yedges},
+                attrs = { 'hist_2d_xunits':self.xunits,
+                        'hist_2d_yunits': self.yunits,
+                        'hist_2d_xname':self.xname,
+                        'hist_2d_yname':self.yname,
+                        'hist_2d_xedges':self.xedges,
+                        'hist_2d_yedges':self.yedges}) 
 
-    def add(self,hist_to_add):
+    def add(self,hist_to_add,name='n'):
         '''add histogram data to existing histogram'''
-
-
-        
 
         #for now, we assume hist_to_add is either an xarray, or a numpy array
         try:
-            h = hist_to_add.values
+            h = hist_to_add.values()
         except:
             h = hist_to_add
 
@@ -83,7 +94,7 @@ class Hist2D():
             print('array to add must be xarray or numpy array')
             raise(ValueError)
 
-        self.data['n']+= h
+        self.data[name]+= h
 
     def compatible(self,z):
 
@@ -106,20 +117,23 @@ class Hist2D():
 
         return hist_compatible
 
-    def combine(self,hist_to_add):
+    def combine(self,hist_to_add,name='n'):
         '''combines two histograms by adding the number in  each  bin
            checks to make sure histograms are compatible -- if not raises 
            ValueError'''
         if  not self.compatible(hist_to_add):
             raise ValueError('histogram to combine not compatible')
 
-        h = hist_to_add.data['n']
+        h = hist_to_add.data[name]
         self.add(h)
         
         return self
 
+    def add_data_var(self,name=None):
+        if name is not None:
+            self.data[name] = (('ycenters','xcenters'),np.zeros((self.num_ybins,self.num_xbins),dtype = np.float32))
 
-    def add_data(self,x,y):
+    def add_data(self,x,y,name='n'):
 
         z = np.all([np.isfinite(x),np.isfinite(y)],axis=(0))
         hist_to_add,xedges,yedges = np.histogram2d(x[z],y[z],
@@ -128,7 +142,7 @@ class Hist2D():
                                                            [self.min_yval, self.max_yval]])
 
         # because num_bins and ranges are from self, the resulting hist_to_add is automatically compatible.
-        self.add(hist_to_add)
+        self.add(hist_to_add,name)
 
     def to_netcdf(self,filename = None):
         ''' writes histogram to a netcdf file'''
@@ -192,16 +206,12 @@ class Hist2D():
     def as_dataset(self):
         return self.data
 
-    def plot(self, title='', xtitle=None, ytitle=None, 
+    def plot(self, name='n', title='', xtitle=None, ytitle=None, 
              aspect='equal', plot_diagonal=True, 
              plot_vert_medians=False,
              plot_horiz_medians=False,
-             rangex = None,rangey= None):
-
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as colors
-        from plot_2d_hist import plot_2d_hist,averages_from_histograms
-
+             rangex = None,rangey= None,num_scale=10000.0,reduce_max = 1.0,
+             fig_in = None,ax_in = None,norm='Log',cmap = 'ocean_r',plt_colorbar=True,fontsize=16):
 
         if xtitle is None:
             xtitle = self.xname
@@ -214,13 +224,15 @@ class Hist2D():
         if rangey is None:
             rangey = rangex
 
-        fig, ax =plot_2d_hist(self.data['n'].values, self.data.attrs['hist_2d_xedges'] , self.data.attrs['hist_2d_yedges'] , 
+        fig, ax =plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges'] , self.data.attrs['hist_2d_yedges'] , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
                                 nbins=self.num_xbins, 
                                 z1_range=rangex,
                                 z2_range=rangey, 
+                                num_scale=num_scale,reduce_max=reduce_max,
                                 aspect=aspect, plot_diagonal=plot_diagonal,
-                                plot_horiz_medians=plot_horiz_medians,plot_vert_medians = plot_vert_medians)
+                                plot_horiz_medians=plot_horiz_medians,plot_vert_medians = plot_vert_medians,
+                                fig_in = fig_in,ax_in = ax_in,norm=norm,cmap = cmap,plt_colorbar=plt_colorbar,fontsize=fontsize)
         return fig, ax
 
 

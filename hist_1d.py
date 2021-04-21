@@ -50,7 +50,7 @@ class Hist1D():
             else:
                 h = hist_to_add  # this  is the hail mary case
 
-        self.data['n']=self.data['n'] + h
+            self.data['n']=self.data['n'] + h
 
     def add_data(self,x):
         z = np.isfinite(x)
@@ -170,7 +170,7 @@ class Hist1D():
 
         return x1,z1
 
-    def plot(self, fig = None, ax = None, title=None, xtitle=None, ytitle=None,label=None,semilog=False):
+    def plot(self, fig = None, ax = None, title=None, xtitle=None, ytitle=None,label=None,semilog=False,fontsize=16):
 
         import matplotlib.pyplot as plt
         import matplotlib.colors as colors
@@ -194,9 +194,9 @@ class Hist1D():
             ax.set_xlabel(xtitle)
             ax.set_ylabel(ytitle)
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-                item.set_fontsize(20)
+                item.set_fontsize(fontsize)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(16)
+                item.set_fontsize(0.8*fontsize)
             ax.set_xlim([self.min_xval,self.max_xval])
             created_fig = True
 
@@ -208,20 +208,20 @@ class Hist1D():
 
         y = self.data['n']
         Y = np.array([y,y]).T.flatten()
-        if np.abs(self.min_xval) < 0.0001:
-            if semilog:
-                ax.semilogy(X,Y,label=label)
-                ax.set_xlim(0.0,50.0)
-            else:
-                ax.plot(X,Y,label=label)
-                ax.set_xlim(0.0,30.0)
+        # if np.abs(self.min_xval) < 0.0001:
+        #     if semilog:
+        #         ax.semilogy(X,Y,label=label)
+        #         ax.set_xlim(0.0,50.0)
+        #     else:
+        #         ax.plot(X,Y,label=label)
+        #         #ax.set_xlim(0.0,30.0)
+        # else:
+        if semilog:
+            ax.semilogy(X,Y,label=label)
         else:
-            if semilog:
-                ax.semilogy(X,Y,label=label)
-            else:
-                ax.plot(X,Y,label=label)
+            ax.plot(X,Y,label=label)
                 
-            ax.set_xlim(self.min_xval,self.max_xval)
+        ax.set_xlim(self.min_xval,self.max_xval)
         
         ax.legend(loc='best',fontsize=13)
 

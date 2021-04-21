@@ -132,23 +132,21 @@ class BinnedStat():
 
     def combine(self,self2):
 
-        if isinstance(self2,BinnedStat):
-            #print('Class types match')
-            try:
-                assert(np.all(self.xbin_edges == self2.xbin_edges))
-            except:
-                raise ValueError('bin definitions to not match, can not combine')
+        try:
+            assert(np.all(self.xbin_edges == self2.xbin_edges))
+        except:
+            raise ValueError('bin definitions to not match, can not combine')
 
-            self.overall_num =     self.overall_num +     self2.overall_num
-            self.overall_tot =     self.overall_tot +     self2.overall_tot
-            self.overall_totsqr =  self.overall_totsqr +  self2.overall_totsqr
+        self.overall_num =     self.overall_num +     self2.overall_num
+        self.overall_tot =     self.overall_tot +     self2.overall_tot
+        self.overall_totsqr =  self.overall_totsqr +  self2.overall_totsqr
 
-            self.binned_num =      self.binned_num +      self2.binned_num
-            self.binned_x_tot =    self.binned_x_tot +    self2.binned_x_tot
-            self.binned_y_tot =    self.binned_y_tot +    self2.binned_y_tot
-            self.binned_y_totsqr = self.binned_y_totsqr + self2.binned_y_totsqr
-        else:
-            raise ValueError('object to add is not an instance of BinnedSat, can not combine')
+        self.binned_num =      self.binned_num +      self2.binned_num
+        self.binned_x_tot =    self.binned_x_tot +    self2.binned_x_tot
+        self.binned_y_tot =    self.binned_y_tot +    self2.binned_y_tot
+        self.binned_y_totsqr = self.binned_y_totsqr + self2.binned_y_totsqr
+        #else:
+        #    raise ValueError('object to add is not an instance of BinnedStat, can not combine')
 
         return self
 
@@ -165,8 +163,7 @@ class BinnedStat():
             
             with np.errstate(invalid='ignore'):
                 z = np.all([(mask < 0.5), (x >= bin_start), (x <= bin_end),(np.isfinite(y))], axis=(0))
-            x_in_bin = x[z]
-            y_in_bin = y[z]
+            
             n_in_bin = np.sum(z)
             if verbose:
                 print(bin_start, bin_end, n_in_bin)
@@ -205,10 +202,20 @@ class BinnedStat():
             attrs ={'overall_tot'       : self.overall_tot,
                     'overall_totsqr'    : self.overall_totsqr,
                     'overall_num'       : self.overall_num,
-                    'binned_stat_xbin_edges'        : self.xbin_edges}
+                    'binned_stat_xbin_edges'        : self.xbin_edges
+                    }
                     )
                     
         return binned_stats_xr
+
+    def to_netcdf(self,ncfilename=None):
+
+        if ncfilename is not None:
+            self.as_DataArray().to_netcdf(ncfilename)
+            return 0
+        else:
+            return -1
+
 
     def calc_stats(self,return_as_xr = False):  
         '''returns binned means, stddevs, xbinned means based on current state of object.
@@ -268,9 +275,36 @@ class BinnedStat():
                             xrng = [self.xbin_edges[0],self.xbin_edges[-1]])
         
         return binned_stats
+
+    def calc_stats_over_range(self,xrange=[0.0,20.0]): 
+        print 
+        '''returns mean,rms and stddev over the specified xrange.
+           returns a dictionary
+           '''
+        
+
+        #first, figure out what bins to include
+        bin_width = self.xbin_edges[1] - self.xbin_edges[0] 
+        bin_ok = np.all([(self.xbin_edges >= xrange[0]),(self.xbin_edges <= xrange[1]-bin_width)],axis=0)
+        bin_ok = bin_ok[0:100]
+        y_tot = np.sum(self.binned_y_tot[bin_ok])
+        y_totsqr = np.sum(self.binned_y_totsqr[bin_ok])
+        num = np.sum(self.binned_num[bin_ok])
+
+        mean = y_tot/num
+        rms    = np.sqrt(y_totsqr/num)
+        stddev = np.sqrt((num*y_totsqr - np.square(y_tot))/(num*(num-1)))
+
+        stats = dict(num=num,
+                     mean=mean,
+                     rms=rms,
+                     stddev=stddev)
+
+        return stats
     
+        
     def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', requirement=None,
-                      plot_num_in_bins=False, num_thres=0):
+                      plot_num_in_bins=False, num_thres=0,fig_in = None,ax_in = None,fontsize=16,as_percent=False):
         import numpy as np
         import xarray as xr
         import matplotlib.pyplot as plt
@@ -282,8 +316,22 @@ class BinnedStat():
         ystd = binned_stats['binned_y_stddev']
         num  = binned_stats['binned_num']
 
-        fig = plt.figure(figsize=(9, 5))
-        ax = fig.add_subplot(111, title=title, xlabel=xlab, ylabel=ylab)
+        if as_percent:
+            ybin = 100.0*ybin
+            ystd = 100.0*ystd
+            requirement = 100.0*requirement
+            yrng=100.0*yrng
+
+        if fig_in == None:
+            fig = plt.figure(figsize=(9, 5))
+        else:
+            fig = fig_in
+        
+        if ax_in == None:
+            ax = fig.add_subplot(111)
+        else:
+            ax = ax_in
+        
         ax.errorbar(xbin[num > num_thres], ybin[num > num_thres], yerr=ystd[num > num_thres], fmt='s', color='blue')
         ax.errorbar(xbin[num <= num_thres], ybin[num <= num_thres], yerr=ystd[num <= num_thres], fmt='s', color='lightblue')
 
@@ -291,6 +339,9 @@ class BinnedStat():
             max = np.floor(np.nanmax([np.nanmax(ybin) + np.nanmax(ystd),-np.nanmin(ybin) + np.nanmax(ystd)]))
             yrng = [-max,max]
 
+        ax.set_xlabel(xlab)
+        ax.set_ylabel(ylab)
+        ax.set_title(title)
         ax.set_ylim(yrng)
         if xrng is not None:
             ax.set_xlim(xrng)
@@ -304,16 +355,16 @@ class BinnedStat():
             ax.plot([0.0, 1.0], [requirement, requirement], color='gray')
 
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-            item.set_fontsize(16)
+            item.set_fontsize(fontsize)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-            item.set_fontsize(12)
+            item.set_fontsize(fontsize-4)
 
         if plot_num_in_bins:
             ax2 = ax.twinx()  # instantiate a second axes that shares the same x-axis
             ax2.semilogy(xbin[1:-1], num[1:-1], color='darkgreen')
             ax2.set_ylabel('Number of Observations')
             for item in ([ax2.yaxis.label]):
-                item.set_fontsize(16)
+                item.set_fontsize(fontsize)
 
         return fig,ax
 

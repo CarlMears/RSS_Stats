@@ -34,7 +34,7 @@ def calc_stats_from_hist(hist,edges):
 
 def plot_2d_hist(hist, xedges, yedges, title='', xtitle='', ytitle='', nbins=120, z1_range=(0.0, 1.2),
                  z2_range=(0.0, 1.2), aspect='equal', plot_diagonal=False, plot_horiz_means=False,
-                 plot_horiz_medians=True,plot_vert_medians = True):
+                 plot_horiz_medians=True,plot_vert_medians = True,fig_in = None,ax_in = None,plt_colorbar=True,fontsize=16):
 
     import matplotlib.pyplot as plt
     import matplotlib.colors as colors
@@ -45,13 +45,25 @@ def plot_2d_hist(hist, xedges, yedges, title='', xtitle='', ytitle='', nbins=120
 
     X, Y = np.meshgrid(xedges, yedges)
     hist_max = np.max(hist)
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111, title=title, aspect=aspect, xlabel=xtitle, ylabel=ytitle)
-    im = ax.pcolormesh(X, Y, hist, cmap='ocean_r', norm=colors.LogNorm(vmin=hist_max / 10000.0, vmax=hist_max))
+    if fig_in is None:
+        fig = plt.figure(figsize=(8, 6))
+    else:
+        fig = fig_in
+
+    if ax_in is None:
+        ax = fig.add_subplot(111,aspect=aspect)
+    else:
+        ax = ax_in
+
+    ax.set_title(title)
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+
+    im = ax.pcolormesh(X, Y, hist, cmap='ocean_r', norm=colors.LogNorm(vmin=hist_max / 1000.0, vmax=hist_max))
     for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-        item.set_fontsize(20)
+        item.set_fontsize(fontsize)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(16)
+        item.set_fontsize(fontsize)
     
     if  z1_range is not None:
         ax.set_xlim(z1_range)
@@ -59,9 +71,10 @@ def plot_2d_hist(hist, xedges, yedges, title='', xtitle='', ytitle='', nbins=120
         ax.set_ylim(z2_range)
         ax.plot(z1_range,z2_range,color='r')
 
-    cbar = fig.colorbar(im)
-    cbar.ax.tick_params(labelsize=16)
-    cbar.ax.set_ylabel('Number of Observations', fontsize=16)
+    if plt_colorbar:
+        cbar = fig.colorbar(im,ax=ax)
+        cbar.ax.tick_params(labelsize=fontsize)
+        cbar.ax.set_ylabel('Number of Observations', fontsize=fontsize)
     if plot_diagonal:
         ax.plot([np.nanmin(xedges),np.nanmax(xedges)],[np.nanmin(yedges),np.nanmax(yedges)], color='red')
     if plot_horiz_medians:
