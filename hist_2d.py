@@ -207,7 +207,7 @@ class Hist2D():
         return self.data
 
     def plot(self, name='n', title='', xtitle=None, ytitle=None, 
-             aspect='equal', plot_diagonal=True, 
+             aspect='equal', plot_diagonal=True,as_percent = False, 
              plot_vert_medians=False,
              plot_horiz_medians=False,
              rangex = None,rangey= None,num_scale=10000.0,reduce_max = 1.0,
@@ -223,6 +223,10 @@ class Hist2D():
 
         if rangey is None:
             rangey = rangex
+        
+        if as_percent:
+            rangex = 100.0*rangex
+            rangey = 100.0*rangey
 
         fig, ax =plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges'] , self.data.attrs['hist_2d_yedges'] , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 

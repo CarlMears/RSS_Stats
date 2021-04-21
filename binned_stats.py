@@ -2,6 +2,45 @@ import numpy as np
 import xarray as xr
 
 class BinnedStat():
+    '''
+    Class to accumulate binned statistics
+
+    Attributes
+    ----------
+    num_bins : int
+        number of bins
+    x_rng : [float,float]
+        lower and upper limit to be put into bins
+    binned_x_tot: numpy float64 array[num_bins]
+        total of the x values acculated into each bin
+    binned_y_tot: numpy float64 array[num_bins]
+        total of the y values acculated into each bin
+    binned_y_totsqr: numpy float64 array[num_bins]
+        total of the square of the y values acculated into each bin
+    binned_num: numpy float64 array[num_bins]
+        total number of data points in each bin
+    overall_tot : float64
+        total of all y values
+    overall_totsqr : float64
+        total of the sqaure of all y values
+    overall_num : float 64
+        total number of datapoints accumulated
+    xbin_size : float64
+        width of each bin, the same for each bin
+    xbin_centers : np float64 array[num_bins]
+        center of each bin (different from average x values!)
+    xbin_edges : np float64 array[num_bins+1]
+        edges of each bin
+
+    Methods
+    --------
+    __init__(num_bin=40,x_rng=[0.0,1.0])
+        initializes a class instance
+    add_data(x,y,mask=None,verbose=False)
+        adds data at points x with values y to the binned stat object
+    plot()
+
+    '''
 
     def __init__(self, num_bins = 40,x_rng=[0.0,1.0]):
 
@@ -145,8 +184,6 @@ class BinnedStat():
         self.binned_x_tot =    self.binned_x_tot +    self2.binned_x_tot
         self.binned_y_tot =    self.binned_y_tot +    self2.binned_y_tot
         self.binned_y_totsqr = self.binned_y_totsqr + self2.binned_y_totsqr
-        #else:
-        #    raise ValueError('object to add is not an instance of BinnedStat, can not combine')
 
         return self
 
