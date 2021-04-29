@@ -224,11 +224,13 @@ class Hist2D():
         if rangey is None:
             rangey = rangex
         
+        edge_factor = 1.0
         if as_percent:
-            rangex = 100.0*rangex
-            rangey = 100.0*rangey
+            rangex = 100.0*np.array(rangex)
+            rangey = 100.0*np.array(rangey)
+            edge_factor=100.0
 
-        fig, ax =plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges'] , self.data.attrs['hist_2d_yedges'] , 
+        fig, ax =plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
                                 nbins=self.num_xbins, 
                                 z1_range=rangex,

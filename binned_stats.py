@@ -211,9 +211,11 @@ class BinnedStat():
                 self.binned_y_totsqr[j] = self.binned_y_totsqr[j] + np.sum(np.square(y[z]))
                 self.binned_num[j] = self.binned_num[j] + n_in_bin
 
-                self.overall_tot = self.overall_tot  + np.sum(y[z])    
-                self.overall_totsqr =self.overall_totsqr + np.sum(np.square(y[z]))
-                self.overall_num  =  self.overall_num + n_in_bin
+        with np.errstate(invalid='ignore'):
+            z = np.all([(mask < 0.5), (x >= self.xbin_edges[0]), (x <= self.xbin_edges[-1]),(np.isfinite(y))], axis=(0))
+            self.overall_tot = np.sum(y[z])    
+            self.overall_totsqr = np.sum(np.square(y[z]))
+            self.overall_num = np.sum(z)
         
         #print(self.overall_tot/self.overall_num)
         
@@ -323,7 +325,7 @@ class BinnedStat():
         #first, figure out what bins to include
         bin_width = self.xbin_edges[1] - self.xbin_edges[0] 
         bin_ok = np.all([(self.xbin_edges >= xrange[0]),(self.xbin_edges <= xrange[1]-bin_width)],axis=0)
-        bin_ok = bin_ok[0:100]
+        bin_ok = bin_ok[0:-1]
         y_tot = np.sum(self.binned_y_tot[bin_ok])
         y_totsqr = np.sum(self.binned_y_totsqr[bin_ok])
         num = np.sum(self.binned_num[bin_ok])
@@ -357,7 +359,9 @@ class BinnedStat():
             ybin = 100.0*ybin
             ystd = 100.0*ystd
             requirement = 100.0*requirement
-            yrng=100.0*yrng
+            yrng=100.0*np.array(yrng)
+            xrng=100.0*np.array(xrng)
+            xbin = 100.0*xbin
 
         if fig_in == None:
             fig = plt.figure(figsize=(9, 5))
@@ -388,8 +392,8 @@ class BinnedStat():
             ax.plot(binned_stats['xrng'], [0.0, 0.0], color='red')
 
         if requirement is not None:
-            ax.plot([0.0, 1.0], [-requirement, -requirement], color='gray')
-            ax.plot([0.0, 1.0], [requirement, requirement], color='gray')
+            ax.plot(xrng, [-requirement, -requirement], color='gray')
+            ax.plot(xrng, [requirement, requirement], color='gray')
 
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
             item.set_fontsize(fontsize)

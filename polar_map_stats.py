@@ -1,4 +1,4 @@
-from sea_ice_plotting import plot_polar_stereographic
+from plotting.sea_ice_plotting import plot_polar_stereographic
 import numpy as np
 import xarray as xr
 from scipy.stats import binned_statistic_2d
@@ -104,7 +104,7 @@ class PolarMapStat:
             lon_temp, lat_temp = polarstereo_inv(x_temp/1000.0,y_temp/1000.0, std_parallel = std_lat, lon_y = std_lon)
         else:
             lon_temp, lat_temp = polarstereo_inv(-x_temp/1000.0, y_temp/1000.0, std_parallel = -std_lat, lon_y = std_lon)
-            lat = -lat
+            lat_temp = -lat_temp
 
         self.data['Longitude'].values = lon_temp
         self.data['Latitude'].values  = lat_temp
@@ -262,6 +262,7 @@ class PolarMapStat:
         if stat=='mean':
             stat_to_plot = self.mean(map_name)
             fig = plot_polar_stereographic(stat_to_plot,zrange=zrange,title=title,units=units,coast_color=coast_color,pole=self.pole,cmap=cmap)
+            
         else:
             raise ValueError('Unsupported stat, supported stats: mean')
         return fig
