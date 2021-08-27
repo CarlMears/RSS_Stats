@@ -17,4 +17,7 @@ map_stats.py contains MapStat
 polar_map_stats.py contains PolarMapStat
     A class for accumulating data in polar-gridded maps
 
-plot_2d_hist.py contains helper functions for Hist2D - should probably be included in hist_2d.py
+plot_2d_hist.py has been moved to the plotting project
+
+There are also several legacy routines in binned_means.py that calculate, combine, and plot binned means.
+
