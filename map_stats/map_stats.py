@@ -43,7 +43,7 @@ class MapStat():
         
         return stats
 
-    def from_netcdf_triple(nc_file = None):
+    def from_netcdf_triple(nc_file = None,speed_only = False):
 
         try:
             ds = xr.open_dataset(nc_file)
@@ -67,27 +67,28 @@ class MapStat():
         dlat = float(lats[1]-lats[0])
         dlon = float(lons[1]-lons[0])
 
-        try:
-            u_tot = ds['u_tot'].values
-            u_tot_sqr = ds['u_tot_sqr'].values
-            u_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
-            u_map_stats.num  = num
-            u_map_stats.tot  = u_tot
-            u_map_stats.totsqr = u_tot_sqr
-        except:
-            print('U data missing from '+nc_file)
-            u_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
+        if not speed_only:
+            try:
+                u_tot = ds['u_tot'].values
+                u_tot_sqr = ds['u_tot_sqr'].values
+                u_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
+                u_map_stats.num  = num
+                u_map_stats.tot  = u_tot
+                u_map_stats.totsqr = u_tot_sqr
+            except:
+                print('U data missing from '+nc_file)
+                u_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
 
-        try:
-            v_tot = ds['v_tot'].values
-            v_tot_sqr = ds['v_tot_sqr'].values
-            v_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
-            v_map_stats.num  = num
-            v_map_stats.tot  = v_tot
-            v_map_stats.totsqr = v_tot_sqr
-        except:
-            print('V data missing from '+nc_file)
-            v_map_stats =MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
+            try:
+                v_tot = ds['v_tot'].values
+                v_tot_sqr = ds['v_tot_sqr'].values
+                v_map_stats = MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
+                v_map_stats.num  = num
+                v_map_stats.tot  = v_tot
+                v_map_stats.totsqr = v_tot_sqr
+            except:
+                print('V data missing from '+nc_file)
+                v_map_stats =MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
         
         
         try:
@@ -100,8 +101,12 @@ class MapStat():
         except:
             print('W data missing from '+nc_file)
             w_map_stats =MapStat(num_lats = num_lats,num_lons = num_lons,min_lat = min_lat,max_lat = max_lat,min_lon = min_lon,max_lon=max_lon)
-        
-        return u_map_stats,v_map_stats,w_map_stats
+        if not speed_only:
+            return u_map_stats,v_map_stats,w_map_stats
+        else:
+            return w_map_stats
+
+
 
     def compatible(self,self2):
         #make sure maps are compatible
@@ -199,9 +204,8 @@ class MapStat():
         return self.num
 
     def mean(self):
-        #mean_map = self.tot/self.num
+        mean_map = np.full_like(self.tot, np.nan)
         np.divide(self.tot, self.num, out=mean_map, where=self.num > 0)
-        #mean_map = np.full_like(self.tot, np.nan)
         return mean_map
 
     def variance(self):

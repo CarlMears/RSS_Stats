@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from plot_2d_hist import plot_2d_hist,averages_from_histograms
+import plot_2d_hist
 
 class Hist2D():
     
@@ -230,7 +230,7 @@ class Hist2D():
             rangey = 100.0*np.array(rangey)
             edge_factor=100.0
 
-        fig, ax =plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
+        fig, ax = plot_2d_hist.plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
                                 nbins=self.num_xbins, 
                                 z1_range=rangex,

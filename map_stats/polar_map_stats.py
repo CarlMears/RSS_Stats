@@ -1,8 +1,8 @@
-from plotting.sea_ice_plotting import plot_polar_stereographic
+from sea_ice_plotting import plot_polar_stereographic
 import numpy as np
 import xarray as xr
 from scipy.stats import binned_statistic_2d
-from polar_projections.polar_grids import polarstereo_inv
+from polar_grids import polarstereo_inv
 
 class PolarMapStat:
     def __init__(self,pole = 'north',type_map = False):

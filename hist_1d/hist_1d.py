@@ -2,6 +2,7 @@
 import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
 class Hist1D():
 
@@ -72,6 +73,7 @@ class Hist1D():
             for attr in attr_to_check:
                 try:
                     if getattr(self,attr) != getattr(z,attr):
+                        print(getattr(self,attr),getattr(z,attr))
                         hist_compatible = False
                 except KeyError:
                     hist_compatible = False  #missing critical key
@@ -82,7 +84,7 @@ class Hist1D():
 
     def combine(self,self2):
 
-        #make sure maps are compatible
+        #make sure histograms are compatible
         try:
             hists_compatible = self.compatible(self2)
         except:
@@ -103,7 +105,7 @@ class Hist1D():
         try:
             ds = xr.open_dataset(nc_file)
         except:
-            return np.nan
+            raise FileExistsError(f'File {nc_file} not found or not netcdf file')
 
         
 
@@ -171,12 +173,6 @@ class Hist1D():
         return x1,z1
 
     def plot(self, fig = None, ax = None, title=None, xtitle=None, ytitle=None,label=None,semilog=False,fontsize=16):
-
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as colors
-        import numpy as np
-
-
         if label is None:
             label = self.name
 
@@ -228,10 +224,6 @@ class Hist1D():
         return fig,ax
 
 if __name__ == '__main__':
-
-    import numpy as np
-    import xarray as xr
-    import matplotlib.pyplot as plt
     from scipy.interpolate import interp1d
 
     '''test histogram matching'''

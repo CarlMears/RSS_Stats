@@ -1,5 +1,6 @@
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
 
 class BinnedStat():
     '''
@@ -344,9 +345,6 @@ class BinnedStat():
         
     def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', requirement=None,
                       plot_num_in_bins=False, num_thres=0,fig_in = None,ax_in = None,fontsize=16,as_percent=False):
-        import numpy as np
-        import xarray as xr
-        import matplotlib.pyplot as plt
 
         binned_stats = self.calc_stats()
 
