@@ -1,6 +1,0 @@
-numpy
-xarray
-scipy
-cartopy
-rss_polar_projections
-rss_plotting

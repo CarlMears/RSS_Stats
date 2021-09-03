@@ -1,0 +1,70 @@
+stages:
+  - lint
+  - build
+  - package
+
+default:
+  image: python:3.9-slim
+
+black:
+  stage: lint
+  except:
+    - schedules
+  allow_failure: true
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off black
+  script:
+    - black --diff --color --check .
+
+flake8:
+  stage: lint
+  except:
+    - schedules
+  allow_failure: true
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off flake8
+  script:
+    - flake8 --count .
+
+pycodestyle:
+  stage: lint
+  except:
+    - schedules
+  allow_failure: true
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off pycodestyle
+  script:
+    - pycodestyle -v .
+
+build:
+  stage: build
+  needs: []
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off build
+  script:
+    - python -m build
+  artifacts:
+    paths:
+      - dist/*.whl
+      - dist/*.tar.gz
+
+publish:
+  stage: package
+  needs: ["build"]
+  # Once a package version is uploaded to a PyPI registry, it cannot be updated. So to ensure no conflicts, only tagged releases are published.
+  only:
+    - tags
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off twine
+  script:
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
