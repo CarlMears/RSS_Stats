@@ -5,6 +5,29 @@ from scipy.stats import binned_statistic_2d
 from polar_grids import polarstereo_inv
 
 class PolarMapStat:
+    ''' 
+    #Overview
+    Class for accumulating and reporting map statistics on a polar stereographic grid.  
+    Maps are assumed to be on a 25 km polarstereographic grid, as defined by NSIDC for each pole.  
+    The number of grid cells is determined by the pole being represented.
+    
+    Each map contains maps of the number of observations, the total of the observations, and the total square of the observations.  
+    This is to make it easy to combined maps, e.g. combine daily maps into a monthly average.  
+
+    There is also an option to have the map refer to a discontinuous "ice type" variable.  
+    
+    Unlike the rectangular MapStat class, the data here is represented as an xarray.  
+
+    #To Do
+      - Add write methods
+      - Add type_map to compatiblity method
+    
+    #Arguments:
+      - pole:  pole to represent - 'north' or 'south'  
+      - type_map:  set to True is the map is of ice_type  
+
+    '''
+
     def __init__(self,pole = 'north',type_map = False):
 
         if pole == 'north':
@@ -23,18 +46,25 @@ class PolarMapStat:
             std_lon = 180.0
         else:
             raise(ValueError,f"pole: {pole} not defined")
-
-
-        self.num_x = num_x
-        self.num_y = num_y
-        self.x_range = x_range
-        self.y_range = y_range
-        self.type_map = type_map
         self.pole = pole
+        '''Pole represented - "north" or "south"'''
+        self.type_map = type_map
+        '''Set to True is a ice type map'''
+        self.num_x = num_x
+        #Number cells in the X direction'''
+        self.num_y = num_y
+        #Number of cells in the Y direction'''
+        self.x_range = x_range
+        #extent of the X coordinate, in cell index'''
+        self.y_range = y_range
+        #Extent of the Y coordinate, in cell index'''
+        
 
         if type_map:
             self.num_stats = 4
+            #Number statistics represented'''
             self.stat_type = ['ocean','new','fy','my']
+            #Names of the stats represented'''
         else:
             self.num_stats = 3
             self.stat_type = [0,1,2]
@@ -112,11 +142,13 @@ class PolarMapStat:
         self.data['Y'].values = y_temp
 
     def add_map(self,map_name = 'none',dtype = np.float32):
+        '''Add data in a 2D polar map to the object, assuming each grid cell has 1 observation'''
         data = np.zeros((self.num_y,self.num_x,self.num_stats),dtype=dtype)
         self.data[map_name] = xr.DataArray(data, coords=[self.data.ygrid,self.data.xgrid,self.data.stat_type], dims=['ygrid', 'xgrid','stat'])
     
     def add_data_to_map_lat_lon(self,map_name='none',values = None,lat = None, lon = None, percent_land = None,land_thres = 1.0,pole = 'north'):
-
+        '''Add data to map from a np arrays of values, latitudes and longitudes  
+        If percent_land is presents, only add data where percent land is < land_threshold  '''
         from polar_projections.polar_grids import polarstereo_fwd,polarstereo_fwd_SP
         if pole == 'north':
             x, y = polarstereo_fwd(lat, lon)
@@ -161,8 +193,11 @@ class PolarMapStat:
                                                                       range=rng)
 
         self.data[map_name] = self.data[map_name] + map
-    def add_data_to_map(self,map_name='none',values = None,ix = None, iy = None, percent_land = None,land_thres = 1.0):
 
+    def add_data_to_map(self,map_name='none',values = None,ix = None, iy = None, percent_land = None,land_thres = 1.0):
+        '''Add data to map from a np arrays of values, x and y locations  
+        ix and iy should already be converted to integer cell positions  
+        If percent_land is presents, only add data where percent land is < land_threshold  '''
         map = np.zeros((self.num_y, self.num_x, self.num_stats))
         if percent_land is None:
             #ignore land  mask because not present
@@ -199,6 +234,8 @@ class PolarMapStat:
         self.data[map_name] = self.data[map_name] + map
 
     def add_type_data_to_map(self,map_name='none',values = None,ix = None, iy = None, percent_land = None,land_thres = 1.0):
+        '''Add data to map from a np arrays of ice types, latitudes and longitudes  
+        If percent_land is presents, only add data where percent land is < land_threshold  '''
 
         if not self.type_map:
             raise(ValueError,'Map object is not an ice type object')
@@ -206,6 +243,8 @@ class PolarMapStat:
         map = np.zeros((self.num_y, self.num_x, self.num_stats))
 
     def compatible(self,self2):
+        '''Check to see if maps are compatible  
+        Often called before combining'''
         if isinstance(self2,PolarMapStat):
             attr_to_check = ['pole', 'num_x', 'num_y','x_range','y_range','std_lat','std_lon']
             maps_compatible = True
@@ -223,6 +262,8 @@ class PolarMapStat:
 
 
     def combine(self,self2,verbose=False):
+        '''Combine data from second PolarMapStat object into self'''
+
         keys = dict(self.data).keys()
         keys2 = dict(self.data).keys()
         common_keys = set(keys) & set(keys2)
@@ -237,6 +278,7 @@ class PolarMapStat:
             self.data[chan] += self2.data[chan]
 
     def num_obs(self):
+        '''Return map of number of observations'''
         if self.type_map:
             return np.sum(self.data[map_name],axis=2)
         else:
@@ -244,6 +286,7 @@ class PolarMapStat:
 
 
     def mean(self,map_name):
+        '''Return mean map'''
         if self.type_map:
             raise ValueError('Error - mean makes no sense for type maps')
         else:
@@ -256,7 +299,7 @@ class PolarMapStat:
         return mean_map
 
     def plot(self,map_name=None,zrange=(0.0,1.0),stat = 'mean',title=None,units=None,coast_color = 'w',cmap=None):
-
+        '''Plot polar map using matplotlib/cartopy'''
         if title is None:
             title = map_name
         if stat=='mean':

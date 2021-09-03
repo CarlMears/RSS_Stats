@@ -21,3 +21,5 @@ plot_2d_hist.py has been moved to the plotting project
 
 There are also several legacy routines in binned_means.py that calculate, combine, and plot binned means.
 
+Routines in rss_maps.py (global_mean, zonal_mean) compute large scale stats
+
