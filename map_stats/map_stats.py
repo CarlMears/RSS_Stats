@@ -23,6 +23,7 @@ class MapStat():
       - self.tot numpy array, total of observations in grid cell
       - self.tot_sqr numpy array, total square of observations in grid cell
     '''
+    
 
     def __init__(self, num_lats = 720,num_lons = 1440,min_lat = -89.875,max_lat = 89.875,min_lon = -179.875,max_lon=179.875):
         '''Initialize MapStat Object'''
