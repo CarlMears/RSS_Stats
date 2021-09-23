@@ -253,6 +253,18 @@ class MapStat():
         variance_map -= np.square(mean_map) 
         return variance_map
 
+    def rms(self):
+        '''Return a map of variances'''
+        #mean_map = self.tot/self.num
+        #variance_map = self.totsqr/self.num - np.square(mean_map)
+        #variance_map[self.num < 3] = np.nan 
+        
+        mean_square_map = np.full_like(self.tot, np.nan)
+        
+        np.divide(self.totsqr, self.num, out=mean_square_map, where=self.num > 2)
+        rms_map = np.sqrt(mean_square_map) 
+        return rms_map
+
     def stddev(self):
         '''Return a map of standard deviations'''
         return np.sqrt(self.variance())

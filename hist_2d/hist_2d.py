@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-import plot_2d_hist
+from plot_2d_hist import plot_2d_hist
 
 class Hist2D():
     
@@ -86,7 +86,7 @@ class Hist2D():
 
         #for now, we assume hist_to_add is either an xarray, or a numpy array
         try:
-            h = hist_to_add.values()
+            h = hist_to_add.values
         except:
             h = hist_to_add
 
@@ -181,7 +181,7 @@ class Hist2D():
                       xname=xname,xunits=xunits,yname=xname,yunits=yunits)
 
         if varname is None:
-            varname = f"n_{var}_ccmp_{compare_sat}"
+            varname = f'n_{var}_model_sat'
 
         z = ds[varname]
 
@@ -211,7 +211,9 @@ class Hist2D():
              plot_vert_medians=False,
              plot_horiz_medians=False,
              rangex = None,rangey= None,num_scale=10000.0,reduce_max = 1.0,
-             fig_in = None,ax_in = None,norm='Log',cmap = 'ocean_r',plt_colorbar=True,fontsize=16):
+             fig_in = None,ax_in = None,norm='Log',cmap = 'ocean_r',plt_colorbar=True,
+             fontsize=16,return_im=False,
+             panel_label=None,panel_label_loc=[0.07,0.9]):
 
         if xtitle is None:
             xtitle = self.xname
@@ -230,7 +232,7 @@ class Hist2D():
             rangey = 100.0*np.array(rangey)
             edge_factor=100.0
 
-        fig, ax = plot_2d_hist.plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
+        return plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
                                 nbins=self.num_xbins, 
                                 z1_range=rangex,
@@ -238,7 +240,9 @@ class Hist2D():
                                 num_scale=num_scale,reduce_max=reduce_max,
                                 aspect=aspect, plot_diagonal=plot_diagonal,
                                 plot_horiz_medians=plot_horiz_medians,plot_vert_medians = plot_vert_medians,
-                                fig_in = fig_in,ax_in = ax_in,norm=norm,cmap = cmap,plt_colorbar=plt_colorbar,fontsize=fontsize)
-        return fig, ax
+                                fig_in = fig_in,ax_in = ax_in,norm=norm,cmap = cmap,plt_colorbar=plt_colorbar,
+                                fontsize=fontsize,return_im = return_im,panel_label=panel_label,panel_label_loc=panel_label_loc)
+        
+       
 
 

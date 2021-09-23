@@ -1,5 +1,6 @@
 '''class for defining, accumulating, and displaying 1D histograms'''
 import numpy as np
+from numpy.random.mtrand import noncentral_chisquare
 import xarray as xr 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
@@ -7,7 +8,7 @@ import matplotlib.colors as colors
 class Hist1D():
 
     def __init__(self,num_xbins = 200,min_xval = -10.0,max_xval=10.0,
-                 name='',units=''):
+                 name=None,units=None,no_var = False):
         self.num_xbins = num_xbins
         self.min_xval = min_xval
         self.max_xval = max_xval
@@ -18,28 +19,40 @@ class Hist1D():
         xedges = self.min_xval + np.arange(0,self.num_xbins+1)*self.size_xbin
         xcenters = 0.5*(xedges[0:num_xbins]+xedges[1:self.num_xbins+1])
         
-        self.data = xr.Dataset(
-            data_vars = {'n' : (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))},
-            coords = {'xedges'   : xedges,
-                      'xcenters' : xcenters})  
+        if name is None:
+            name = 'n'
 
-    def get_cumulative(self):
+        if no_var:
+            self.data = xr.Dataset(
+                coords = {'xedges'   : xedges,
+                        'xcenters' : xcenters}) 
+        else:
+            self.data = xr.Dataset(
+                data_vars = {'n' : (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))},
+                coords = {'xedges'   : xedges,
+                        'xcenters' : xcenters}) 
+
+    def add_data_var(self,name=None):
+        if name is not None:
+            self.data[name] = (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))
+
+    def get_cumulative(self,name='n'):
 
         x_vals = self.data['xedges']
-        z = np.insert(self.data['n'].values,0,0.0)
+        z = np.insert(self.data[name].values,0,0.0)
         cumsum = np.cumsum(z)
         return x_vals,cumsum
 
-    def get_tot_num(self):
-        tot_num = np.sum(self.data['n'].values)
+    def get_tot_num(self,name='n'):
+        tot_num = np.sum(self.data[name].values)
         return tot_num
 
-    def add(self,hist_to_add):
+    def add(self,hist_to_add,name='n'):
         '''add histogram data to existing histogram'''
         
         if isinstance(hist_to_add, Hist1D):
             # if it is a Hist1D instance, use the existing combine method.
-            self.combine(hist_to_add)
+            self.combine(hist_to_add,name=name)
         else:
             # for now, we assume hist_to_add is either and xarray, or a numpy array
             # takes bin match up on faith!
@@ -51,14 +64,14 @@ class Hist1D():
             else:
                 h = hist_to_add  # this  is the hail mary case
 
-            self.data['n']=self.data['n'] + h
+            self.data[name]=self.data[name] + h
 
-    def add_data(self,x):
+    def add_data(self,x,name='n'):
         z = np.isfinite(x)
         hist_to_add,xedges = np.histogram(x[z],
                                         bins=self.num_xbins,
                                         range=[self.min_xval, self.max_xval])
-        self.add(hist_to_add)
+        self.add(hist_to_add,name=name)
 
     def compatible(self,z):
 
@@ -82,7 +95,7 @@ class Hist1D():
 
         return hist_compatible
 
-    def combine(self,self2):
+    def combine(self,self2,name='n',name2 = 'n'):
 
         #make sure histograms are compatible
         try:
@@ -93,8 +106,8 @@ class Hist1D():
         if not hists_compatible:
             raise ValueError('Hist1D objects not compatible, can not combine')
 
-        hist_to_add = self2.data['n']
-        self.add(hist_to_add)
+        hist_to_add = self2.data[name2]
+        self.add(hist_to_add,name=name)
 
     def to_netcdf(self,filename = None):
 
@@ -139,12 +152,12 @@ class Hist1D():
 
         return self
 
-    def match_to(self,hist_to_match,attenuate_near_zero = False,atten_thres = 5.0):
+    def match_to(self,hist_to_match,attenuate_near_zero = False,atten_thres = 5.0,name='n'):
         '''constructs an additive matching function that when added to the data that resulted in the histogram in self, with result in a
         new dataset with a histigram that matches the histogram  in hist2'''
 
-        x,hist_in_cumsum =  self.get_cumulative()
-        x,hist_to_match_cumsum = hist_to_match.get_cumulative()
+        x,hist_in_cumsum =  self.get_cumulative(nmae=name)
+        x,hist_to_match_cumsum = hist_to_match.get_cumulative(name=name)
 
         hist_in_cumsum = hist_in_cumsum/hist_in_cumsum[-1]
         hist_to_match_cumsum = hist_to_match_cumsum/hist_to_match_cumsum[-1]
@@ -172,9 +185,21 @@ class Hist1D():
 
         return x1,z1
 
-    def plot(self, fig = None, ax = None, title=None, xtitle=None, ytitle=None,label=None,semilog=False,fontsize=16):
+    def plot(self, fig = None, 
+                ax = None, 
+                name='n',
+                rangex = None,
+                rangey = None,
+                title=None, 
+                xtitle=None, 
+                ytitle=None,
+                label=None,
+                semilog=False,
+                fontsize=16,
+                panel_label=None,
+                panel_label_loc=[0.07,0.9]):
         if label is None:
-            label = self.name
+            label = name
 
         if xtitle is None:
             xtitle = self.units
@@ -186,145 +211,54 @@ class Hist1D():
         created_fig = False
         if ax is None:
             fig,ax = plt.subplots(figsize=(10,8))
-            ax.set_title(title)
-            ax.set_xlabel(xtitle)
-            ax.set_ylabel(ytitle)
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-                item.set_fontsize(fontsize)
-            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(0.8*fontsize)
             ax.set_xlim([self.min_xval,self.max_xval])
             created_fig = True
 
+        if title is not None:
+            ax.set_title(title)
+        if xtitle is not None:
+            ax.set_xlabel(xtitle)
+        if ytitle is not None:
+            ax.set_ylabel(ytitle)
 
+        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
+            item.set_fontsize(fontsize)
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(0.8*fontsize)
         
         left,right = self.data['xedges'][:-1],self.data['xedges'][1:]
         X = np.array([left,right]).T.flatten()
         
 
-        y = self.data['n']
+        y = self.data[name]
         Y = np.array([y,y]).T.flatten()
-        # if np.abs(self.min_xval) < 0.0001:
-        #     if semilog:
-        #         ax.semilogy(X,Y,label=label)
-        #         ax.set_xlim(0.0,50.0)
-        #     else:
-        #         ax.plot(X,Y,label=label)
-        #         #ax.set_xlim(0.0,30.0)
-        # else:
+
         if semilog:
             ax.semilogy(X,Y,label=label)
         else:
             ax.plot(X,Y,label=label)
-                
-        ax.set_xlim(self.min_xval,self.max_xval)
         
-        ax.legend(loc='best',fontsize=13)
+        if rangex is None:
+            ax.set_xlim(self.min_xval,self.max_xval)
+        else:
+            ax.set_xlim(rangex[0],rangex[1])
+
+        if rangey is None:
+            if semilog:
+                ax.set_ylim(10.0,2.0*np.nanmax(y))
+            else:
+                ax.set_ylim(0.0,1.2*np.nanmax(y))
+        else:
+            ax.set_ylim(rangey[0],rangey[1])
+        
+        ax.legend(loc='best',fontsize=10)
+
+        if panel_label is not None:
+            plt.text(panel_label_loc[0],panel_label_loc[1],panel_label,transform=ax.transAxes,fontsize=16)
 
         return fig,ax
 
 if __name__ == '__main__':
-    from scipy.interpolate import interp1d
-
-    '''test histogram matching'''
-
-    plot_path = 'C:/job_CCMP/python/plotting_and_analysis/histogram_matching/'
-
-    #y1 = np.random.normal(loc = 10.0,scale = 2.0,size=10000000)
-    #y2 = 1.1*np.copy(y1)
-
-    ds = xr.open_dataset('C:/job_CCMP/compare_era5_vs_ASCAT/nc_files/NS_oscar/ERA5_vs_ASCAT_A_all_winds_NS_Oscar_2017_01.nc')
-    y1 = ds['w_model'].values
-    y1 = y1[1:]
-    y2 = ds['w_ascat'].values
-    y2 = y2[1:]
-
-    hist1 = Hist1D(min_xval= 0.0,max_xval=50.0,num_xbins=250)
-    hist2 = Hist1D(min_xval= 0.0,max_xval=50.0,num_xbins=250)
-
-    hist1.add_data(y1)
-    hist2.add_data(y2)
-
-    hist_fig,ax = hist1.plot(label='ERA5')
-    ax = hist2.plot(fig = hist_fig,ax=ax,label='ASCAT-A')
-    png_file = plot_path+'ascat_era5_example_inputs.png'
-    hist_fig.savefig(png_file)
-
-    hist_fig_log,ax = hist1.plot(semilog=True,label='ERA5')
-    ax = hist2.plot(fig = hist_fig_log,ax=ax,semilog=True,label='Histogram to match')
-    png_file = plot_path+'ascat_era5_example_inputs_semilog.png'
-    hist_fig_log.savefig(png_file)
-
-    x,hist_in_cumsum =  hist1.get_cumulative()
-    x,hist_to_match_cumsum = hist2.get_cumulative()
-
-    hist_in_cumsum = hist_in_cumsum/hist_in_cumsum[-1]
-    hist_to_match_cumsum = hist_to_match_cumsum/hist_to_match_cumsum[-1]
-
-    fig = plt.figure(figsize=(8,5))
-    ax = fig.add_subplot(111)
-    ax.plot(x,hist_in_cumsum,label = 'ERA5')
-    ax.plot(x,hist_to_match_cumsum,label = 'ASCAT-A')
-    ax.set_xlim(0.0,40.0)
-    ax.legend()
-    ax.set_title('Cumulative Histograms')
-    ax.set_xlabel('Wind Speed (m/s)')
-    ax.set_ylabel('Fraction of Observations less than X value')
-       
-    plot_path = 'C:/job_CCMP/python/plotting_and_analysis/histogram_matching/'
-    png_file = plot_path+'ascat_era5_example_cumulative_hists.png'
-    fig.savefig(png_file)
-
-    #plt.show()
-
-    x,z = hist1.match_to(hist2)
-    corr_fig = plt.figure(figsize=(6.5,5))
-    ax = corr_fig.add_subplot(111)
-    ax.plot(x,z)
-    ax.set_xlim(0.0,40.0)
-    ax.set_ylim(0.0,40.0)
-    ax.plot([0.0,40.0],[0.0,40.0],color='grey',linewidth=0.5)
-    ax.set_aspect('equal')
-    ax.set_xlabel('ERA5')
-    ax.set_ylabel('Adjusted Value')
-    ax.set_title('Adjustment Function F')
-    png_file = plot_path+'ascat_era5_example_adj_function.png'
-    corr_fig.savefig(png_file)
-
-    alpha = z/x
-    alpha_fig = plt.figure(figsize=(6.5,5))
-    ax = alpha_fig.add_subplot(111)
-    ax.plot(x,alpha)
-    ax.set_xlim(0.0,40.0)
-    ax.set_ylim(0.8,1.6)
-    ax.plot([0.0,40.0],[1.0,1.0],color='grey',linewidth=0.5)
-    ax.set_xlabel('ERA5')
-    ax.set_ylabel('Adjustment Factor')
-    ax.set_title('Adjustment Factor Alpha')
-    png_file = plot_path+'ascat_era5_example_adj_factor.png'
-    alpha_fig.savefig(png_file)
-  
-    interp = interp1d(x,z,
-                      kind='linear',
-                      fill_value='extrapolate')
-    
-    y3 = interp(y1)
-
-    hist3 = Hist1D(min_xval= 0.0,max_xval=50.0,num_xbins=250)
-    hist3.add_data(y3)
-
-    hist_fig,ax = hist1.plot(label='ERA5')
-    ax = hist2.plot(fig = hist_fig,ax=ax,label='ASCAT-A')
-    ax = hist3.plot(fig = hist_fig,ax=ax,label='ERA5, Adjusted')
-    png_file = plot_path+'ascat_era5_example_final_match.png'  
-    hist_fig.savefig(png_file)
-  
-    hist_fig_semilog,ax = hist1.plot(semilog=True,label='ERA5')
-    ax = hist2.plot(fig = hist_fig_semilog,ax=ax,semilog=True,label='Hist to Match')
-    ax = hist3.plot(fig = hist_fig_semilog,ax=ax,semilog=True,label='ERA5, Adjusted')
-    png_file = plot_path+'ascat_era5_example_final_semilog.png'  
-    hist_fig_semilog.savefig(png_file)
-
-    plt.show()
-
     print()
+   
+   

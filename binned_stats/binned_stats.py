@@ -343,8 +343,8 @@ class BinnedStat():
         return stats
     
         
-    def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', requirement=None,
-                      plot_num_in_bins=False, num_thres=0,fig_in = None,ax_in = None,fontsize=16,as_percent=False):
+    def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', panel_label=None,panel_label_loc=[0.05,0.9],
+            requirement=None, plot_num_in_bins=False, num_thres=0, fig_in = None, ax_in = None, fontsize=16, as_percent=False):
 
         binned_stats = self.calc_stats()
 
@@ -404,6 +404,13 @@ class BinnedStat():
             ax2.set_ylabel('Number of Observations')
             for item in ([ax2.yaxis.label]):
                 item.set_fontsize(fontsize)
+        
+        if panel_label is not None:
+            plt.text(panel_label_loc[0],panel_label_loc[1],
+                        panel_label,
+                        transform=ax.transAxes,
+                        fontsize=fontsize,
+                        bbox={"facecolor": 'white',"edgecolor": 'white'})
 
         return fig,ax
 
