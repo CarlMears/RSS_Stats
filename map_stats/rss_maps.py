@@ -43,3 +43,36 @@ def global_mean(map):
     mn  = np.nanmean(wted_map)
     stddev = np.nanstd(wted_map)
     return mn,stddev
+
+def global_weighted_mean(map,wts):
+    import numpy as np
+    sz = map.shape
+    sz_wts = wts.shape
+
+    if ((sz[0] != sz_wts[0]) or (sz[1] != sz_wts[1])):
+        raise ValueError('map and wts not compatible')
+
+    num_lats = sz[0]
+    num_lons = sz[1]
+    if (num_lats % 2) == 0:
+        delta_lat = 180.0/num_lats
+        lats = -90.0 + delta_lat/2.0 + np.arange(0,num_lats)*delta_lat
+    else:
+        delta_lat = 180.0/(num_lats -1)
+        lats = -90.0 + np.arange(0,num_lats)*delta_lat
+        
+    lat_wt_map = np.zeros((num_lats,num_lons))
+    for ilat in np.arange(0,num_lats):
+        lat_wt_map[ilat,:] = np.ones((num_lons))*np.cos(2.0*np.pi*lats[ilat]/360.0)
+
+    lat_wt_map = lat_wt_map*wts
+        
+    #global_map(lat_wt_map, vmin=-1.0, vmax=1.0, cmap=cmap_diff, plt_colorbar=True,
+    #                                 title='lat wts')
+    
+    total_map = np.nansum(map*lat_wt_map)
+    total_wt = np.nansum(lat_wt_map)
+    
+    mn  = total_map/total_wt
+
+    return mn

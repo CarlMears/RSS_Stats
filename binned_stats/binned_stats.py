@@ -63,7 +63,10 @@ class BinnedStat():
 
     def from_dataset(ds = None):
         #creates BinnedStat object from a binned stat xarray dataset
-        xbin_centers = ds['xbin_centers'] 
+        try:
+            xbin_centers = ds['binned_stat_xbin_centers'] 
+        except:
+            xbin_centers = ds['xbin_centers'] 
         try:
             xbin_edges = ds['xbin_edges']
         except KeyError:

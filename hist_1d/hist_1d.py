@@ -43,6 +43,11 @@ class Hist1D():
         cumsum = np.cumsum(z)
         return x_vals,cumsum
 
+    def get_values(self,name='n'):
+
+        x_vals = self.data['xedges']
+        return x_vals,self.data[name].values
+
     def get_tot_num(self,name='n'):
         tot_num = np.sum(self.data[name].values)
         return tot_num
@@ -81,15 +86,17 @@ class Hist1D():
             instance of the Hist2D class '''
         hist_compatible = True
         
+
         if isinstance(z,Hist1D):
             attr_to_check = ['num_xbins','min_xval','max_xval']
             for attr in attr_to_check:
                 try:
                     if getattr(self,attr) != getattr(z,attr):
-                        print(getattr(self,attr),getattr(z,attr))
+                        print(f'attr missmatch {attr}: {getattr(self,attr)}, {getattr(z,attr)}')
                         hist_compatible = False
                 except KeyError:
-                    hist_compatible = False  #missing critical key
+                    print(f'Missing attr {attr}')
+                    hist_compatible = False  #missing critical attr
         else:
             hist_compatible = False
 
@@ -98,13 +105,13 @@ class Hist1D():
     def combine(self,self2,name='n',name2 = 'n'):
 
         #make sure histograms are compatible
-        try:
-            hists_compatible = self.compatible(self2)
-        except:
-            raise ValueError('Hist1D objects not compatible, can not combine')
+        # try:
+        #     hists_compatible = self.compatible(self2)
+        # except:
+        #     raise ValueError('Hist1D compatible failed, can not combine')
 
-        if not hists_compatible:
-            raise ValueError('Hist1D objects not compatible, can not combine')
+        # if not hists_compatible:
+        #     raise ValueError('Hist1D objects not compatible, can not combine')
 
         hist_to_add = self2.data[name2]
         self.add(hist_to_add,name=name)
@@ -156,7 +163,7 @@ class Hist1D():
         '''constructs an additive matching function that when added to the data that resulted in the histogram in self, with result in a
         new dataset with a histigram that matches the histogram  in hist2'''
 
-        x,hist_in_cumsum =  self.get_cumulative(nmae=name)
+        x,hist_in_cumsum =  self.get_cumulative(name=name)
         x,hist_to_match_cumsum = hist_to_match.get_cumulative(name=name)
 
         hist_in_cumsum = hist_in_cumsum/hist_in_cumsum[-1]
@@ -171,7 +178,8 @@ class Hist1D():
 
         if  attenuate_near_zero:
             diff = z1-x1
-            # reduce differences below threshold of about 5 m/s
+            # reduce differences below threshold set by atten_thres in m/s
+
             squelcher = np.ones_like(z1)
             num = np.sum(np.abs(x1 < atten_thres))
             a = -1.0/(atten_thres*atten_thres)
@@ -197,7 +205,7 @@ class Hist1D():
                 semilog=False,
                 fontsize=16,
                 panel_label=None,
-                panel_label_loc=[0.07,0.9]):
+                panel_label_loc=[0.04,0.92]):
         if label is None:
             label = name
 

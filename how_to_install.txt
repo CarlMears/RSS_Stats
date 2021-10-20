@@ -1,0 +1,7 @@
+cd to the folder that contains the rss_stats folder
+if you are using conda, activate the environment that you want the package
+added to.
+
+issue the command:
+python -m pip install .\rss_stats
+
