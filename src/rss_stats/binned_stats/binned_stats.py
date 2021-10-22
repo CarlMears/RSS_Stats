@@ -43,7 +43,7 @@ class BinnedStat():
 
     '''
 
-    def __init__(self, num_bins = 40,x_rng=[0.0,1.0]):
+    def __init__(self, num_bins = 40, x_rng=[0.0,1.0]):
 
         self.num_bins = num_bins
         self.x_rng = x_rng
