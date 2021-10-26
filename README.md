@@ -33,10 +33,10 @@ Contains BinnedStat, a class for accumulating data to calculate binned means and
 bs = BinnedStats(num_bins = 40, x_rng=[0.0,1.0])
 ### Methods
 #### BinnedStats.add_data(self,x,y,mask=None,verbose=False):
-    - x: arraylike, x values to be added
-    - y: arraylike, same size as x, y values to be added
-    - mask: arraylike, same size as x and y, set to > 0.5 to exclude data
-    - verbose: boolean, if True, verbose reporting
+- x: arraylike, x values to be added
+- y: arraylike, same size as x, y values to be added
+- mask: arraylike, same size as x and y, set to > 0.5 to exclude data
+- verbose: boolean, if True, verbose reporting
 
 
 
