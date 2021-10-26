@@ -320,11 +320,9 @@ class BinnedStat2D():
                            (x >= self.xbin_edges[0]), (x <= self.xbin_edges[-1]),
                            (y >= self.ybin_edges[0]), (y <= self.ybin_edges[-1]),
                            (np.isfinite(z))], axis=(0))
-            self.overall_tot = np.sum(z[z_ok])    
-            self.overall_totsqr = np.sum(np.square(z[z_ok]))
-            self.overall_num = np.sum(z_ok)
-        
-        #print(self.overall_tot/self.overall_num)
+            self.overall_tot += np.sum(z[z_ok])    
+            self.overall_totsqr += np.sum(np.square(z[z_ok]))
+            self.overall_num += np.sum(z_ok)
         
     def as_DataArray(self):
         # return as an xarray DataArray
@@ -390,6 +388,8 @@ class BinnedStat2D():
 
         z.binned_stat_xbin_edges = da.binned_stat_xbin_edges
         z.binned_stat_ybin_edges = da.binned_stat_ybin_edges
+
+        z.attrs = da.attrs
 
         return z
 

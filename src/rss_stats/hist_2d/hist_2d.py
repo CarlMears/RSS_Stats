@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from plot_2d_hist import plot_2d_hist
+from .plot_2d_hist import plot_2d_hist
 
 class Hist2D():
     
