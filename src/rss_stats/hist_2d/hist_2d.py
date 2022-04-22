@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from .plot_2d_hist import plot_2d_hist
+from rss_plotting.plot_2d_hist import plot_2d_hist
 
 class Hist2D():
     
@@ -144,12 +144,46 @@ class Hist2D():
         # because num_bins and ranges are from self, the resulting hist_to_add is automatically compatible.
         self.add(hist_to_add,name)
 
-    def to_netcdf(self,filename = None):
+    def to_netcdf_old(self,filename = None):
         ''' writes histogram to a netcdf file'''
 
         #self.data is an xarray instance, so we can use xarray.to_netcdf
 
         self.data.to_netcdf(path  = filename)
+
+    def to_netcdf(self,*,ncfilename):
+        ''' writes histogram to a netcdf file'''
+
+        from netCDF4 import Dataset as netcdf_dataset
+
+        root_grp = netcdf_dataset(ncfilename,'w',format = 'NETCDF4')
+
+        root_grp.createDimension('xbin_centers',self.num_xbins)
+        root_grp.createDimension('xbin_edges',self.num_xbins+1)
+        root_grp.createDimension('ybin_centers',self.num_ybins)
+        root_grp.createDimension('ybin_edges',self.num_ybins+1)
+       
+        xbin_centers  = root_grp.createVariable('xbin_centers','f4',('xbin_centers',))
+        xbin_centers.units = self.data.attrs['hist_2d_xunits']
+        xbin_centers.longname = self.data.attrs['hist_2d_xname']
+        xbin_edges    = root_grp.createVariable('xbin_edges','f4',('xbin_edges',)) 
+        ybin_centers  = root_grp.createVariable('ybin_centers','f4',('ybin_centers',))
+        ybin_centers.units = self.data.attrs['hist_2d_yunits']
+        ybin_centers.longname = self.data.attrs['hist_2d_yname']
+
+        ybin_edges    = root_grp.createVariable('ybin_edges','f4',('ybin_edges',)) 
+
+        n = root_grp.createVariable('n','f8',('ybin_centers','xbin_centers',))
+
+        xbin_centers[:] = self.xcenters
+        xbin_edges[:] = self.xedges
+        ybin_centers[:] = self.ycenters
+        ybin_edges[:] = self.yedges
+
+        n[:,:] = self.data['n'].values
+
+        root_grp.close()
+
 
     def from_netcdf(nc_file = None,varname = None,var = 'w',compare_sat=None,xname='',xunits='',yname='',yunits=''):
 
@@ -234,14 +268,23 @@ class Hist2D():
 
         return plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
-                                nbins=self.num_xbins, 
-                                z1_range=rangex,
-                                z2_range=rangey, 
-                                num_scale=num_scale,reduce_max=reduce_max,
-                                aspect=aspect, plot_diagonal=plot_diagonal,
-                                plot_horiz_medians=plot_horiz_medians,plot_vert_medians = plot_vert_medians,
-                                fig_in = fig_in,ax_in = ax_in,norm=norm,cmap = cmap,plt_colorbar=plt_colorbar,
-                                fontsize=fontsize,return_im = return_im,panel_label=panel_label,panel_label_loc=panel_label_loc)
+                                x_range=rangex,
+                                y_range=rangey, 
+                                num_scale=num_scale,
+                                reduce_max=reduce_max,
+                                aspect=aspect, 
+                                plot_diagonal=plot_diagonal,
+                                plot_horiz_medians=plot_horiz_medians,
+                                plot_vert_medians = plot_vert_medians,
+                                fig_in = fig_in,
+                                ax_in = ax_in,
+                                norm=norm,
+                                cmap = cmap,
+                                plt_colorbar=plt_colorbar,
+                                fontsize=fontsize,
+                                return_im = return_im,
+                                panel_label=panel_label,
+                                panel_label_loc=panel_label_loc)
         
        
 

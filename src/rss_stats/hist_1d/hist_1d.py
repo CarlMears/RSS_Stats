@@ -61,7 +61,7 @@ class Hist1D():
         else:
             # for now, we assume hist_to_add is either and xarray, or a numpy array
             # takes bin match up on faith!
-            #to do: for the xarray case, chould add code to check bins
+            #to do: for the xarray case, should add code to check bins
             if type(hist_to_add) is np.ndarray:
                 h = hist_to_add
             elif isinstance(hist_to_add,xr.DataArray):
@@ -69,6 +69,8 @@ class Hist1D():
             else:
                 h = hist_to_add  # this  is the hail mary case
 
+            #replace NaN with 0
+            h = np.nan_to_num(h,nan = 0.0)
             self.data[name]=self.data[name] + h
 
     def add_data(self,x,name='n'):
@@ -116,6 +118,10 @@ class Hist1D():
         hist_to_add = self2.data[name2]
         self.add(hist_to_add,name=name)
 
+    def scale_values(self,name='n',scale_factor=1.0):
+
+        self.data[name].values = self.data[name].values*scale_factor
+
     def to_netcdf(self,filename = None):
 
         self.data.to_netcdf(path  = filename)
@@ -151,7 +157,7 @@ class Hist1D():
 
 
         if varname is None:
-            varname = f"n_{var}_ccmp_{compare_sat}"
+            varname = f"n"
             
         z = ds[varname]
 
@@ -201,13 +207,15 @@ class Hist1D():
                 title=None, 
                 xtitle=None, 
                 ytitle=None,
-                label=None,
+                label=' ',
                 semilog=False,
                 fontsize=16,
                 panel_label=None,
                 panel_label_loc=[0.04,0.92]):
-        if label is None:
-            label = name
+
+
+        # if label is None:
+        #     label = name
 
         if xtitle is None:
             xtitle = self.units

@@ -2,47 +2,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib import colors
-
-def plot_2d_array(z, z_range,xedges, yedges, 
-                 title='', xtitle='', ytitle='',   
-                 aspect='equal',
-                 fig_in = None,ax_in = None,
-                 norm='Linear',cmap = 'BrBG',
-                 plt_colorbar=True,colorbar_title='Number of Observations',fontsize=16):
-
-    X, Y = np.meshgrid(xedges, yedges)
-    
-    
-    if fig_in is None:
-        fig = plt.figure(figsize=(10,8))
-    else:
-        fig = fig_in
-
-    if ax_in is None:
-        ax = fig.add_subplot(111,aspect=aspect)
-    else:
-        ax = ax_in
-
-    ax.set_title(title)
-    ax.set_xlabel(xtitle)
-    ax.set_ylabel(ytitle)
-
-    if norm == 'Log':
-         im = ax.pcolormesh(X, Y, z, cmap=cmap, norm=colors.LogNorm(vmin=z_range[0], vmax=z_range[1]))
-    else:
-        im = ax.pcolormesh(X, Y, z, cmap=cmap, vmin=z_range[0],vmax=z_range[1])
-   
-    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-        item.set_fontsize(fontsize)
-    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(fontsize)
-
-    if plt_colorbar:
-        cbar = fig.colorbar(im,ax=ax)
-        cbar.ax.tick_params(labelsize=fontsize)
-        cbar.ax.set_ylabel(colorbar_title, fontsize=fontsize-2)
-    
-    return fig, ax
+from rss_plotting.plot_2d_array import plot_2d_array
 
 def plot_array_triple(*,num,
                         mean,

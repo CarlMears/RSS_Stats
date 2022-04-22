@@ -1,4 +1,4 @@
-from rss_plotting.sea_ice_plotting import plot_polar_stereographic
+from rss_plotting.polar_map import plot_polar_stereographic
 import numpy as np
 import xarray as xr
 from scipy.stats import binned_statistic_2d

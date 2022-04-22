@@ -83,9 +83,20 @@ class BinnedStat():
         self.binned_y_totsqr = ds['binned_y_totsqr']
         self.binned_num = ds['binned_num']
 
-        self.overall_num = ds.attrs['overall_num']
-        self.overall_tot = ds.attrs['overall_tot']
-        self.overall_totsqr = ds.attrs['overall_totsqr']
+        try:
+            self.overall_num = ds.attrs['overall_num']
+        except KeyError:
+            self.overall_num = np.nansum(self.binned_num)
+
+        try:
+            self.overall_tot = ds.attrs['overall_tot']
+        except KeyError:
+            self.overall_tot = np.nansum(self.binned_y_tot)
+
+        try:
+            self.overall_totsqr = ds.attrs['overall_totsqr']
+        except KeyError:
+            self.overall_totsqr = np.nansum(self.binned_y_totsqr)
 
         return self
 
@@ -163,10 +174,8 @@ class BinnedStat():
 
     def from_netcdf(nc_file = None):
 
-        try:
-            ds = xr.open_dataset(nc_file)
-        except:
-            return np.nan
+        ds = xr.open_dataset(nc_file)
+        
         try:
             self = BinnedStat.from_dataset(ds)
         except KeyError:
@@ -219,7 +228,7 @@ class BinnedStat():
             z = np.all([(mask < 0.5), (x >= self.xbin_edges[0]), (x <= self.xbin_edges[-1]),(np.isfinite(y))], axis=(0))
             self.overall_tot = np.sum(y[z])    
             self.overall_totsqr = np.sum(np.square(y[z]))
-            self.overall_num = np.sum(z)
+            self.overall_num = float(np.sum(z))
         
         #print(self.overall_tot/self.overall_num)
         
@@ -251,13 +260,32 @@ class BinnedStat():
                     
         return binned_stats_xr
 
-    def to_netcdf(self,ncfilename=None):
+    def to_netcdf(self,*,ncfilename):
+        from netCDF4 import Dataset as netcdf_dataset
 
-        if ncfilename is not None:
-            self.as_DataArray().to_netcdf(ncfilename)
-            return 0
-        else:
-            return -1
+        root_grp = netcdf_dataset(ncfilename,'w',format = 'NETCDF4')
+
+        root_grp.createDimension('xbin_centers',self.num_bins)
+        root_grp.createDimension('xbin_edges',self.num_bins+1)
+
+        xbin_centers  = root_grp.createVariable('xbin_centers','f4',('xbin_centers',))
+        xbin_edges    = root_grp.createVariable('xbin_edges','f4',('xbin_edges',)) 
+
+        binned_num = root_grp.createVariable('binned_num','f8',('xbin_centers',))
+        binned_x_tot = root_grp.createVariable('binned_x_tot','f8',('xbin_centers',))
+        binned_y_tot = root_grp.createVariable('binned_y_tot','f8',('xbin_centers',))
+        binned_y_totsqr = root_grp.createVariable('binned_y_totsqr','f8',('xbin_centers',))
+
+        xbin_centers[:] = self.xbin_centers
+        xbin_edges[:] = self.xbin_edges
+
+        binned_num[:] = self.binned_num
+        binned_x_tot[:] = self.binned_x_tot
+        binned_y_tot[:] = self.binned_y_tot
+        binned_y_totsqr[:] = self.binned_y_totsqr
+
+        root_grp.close()
+
 
 
     def calc_stats(self,return_as_xr = False):  
@@ -267,6 +295,7 @@ class BinnedStat():
         binned_x_means = np.full((self.num_bins),np.nan)
         binned_y_means =np.full((self.num_bins),np.nan)
         binned_y_stddev = np.full((self.num_bins),np.nan)
+        binned_y_rms = np.full((self.num_bins),np.nan)
         
         ok = self.binned_num > 0
         if np.sum(ok) > 0:
@@ -278,6 +307,7 @@ class BinnedStat():
         if np.sum(ok) > 0:
             sum_of_sqr_dev[ok] = self.binned_y_totsqr[ok] - (np.square(self.binned_y_tot[ok]))/self.binned_num[ok]
             binned_y_stddev[ok] = np.sqrt(sum_of_sqr_dev[ok]/(self.binned_num[ok] - 1))
+            binned_y_rms[ok] = np.sqrt(self.binned_y_totsqr[ok]/(self.binned_num[ok]))
 
         overall_mean = np.nan
         overall_stddev = np.nan
@@ -296,7 +326,8 @@ class BinnedStat():
                         data_vars={'binned_x_means':    (('xbin_centers'),binned_x_means),
                                    'binned_y_means':    (('xbin_centers'),binned_y_means),
                                    'binned_y_stddev':   (('xbin_centers'),binned_y_stddev),
-                                   'binned_num'     :        (('xbin_centers'),self.binned_num)},
+                                   'binned_y_rms'   :   (('xbin_centers'),binned_y_rms),
+                                   'binned_num'     :   (('xbin_centers'),self.binned_num)},
                         coords={'xbin_centers'      : self.xbin_centers,
                                 'xbin_edges'        : self.xbin_edges},
                         attrs ={'overall_mean'      : overall_mean,
@@ -308,6 +339,7 @@ class BinnedStat():
             binned_stats = dict(binned_x_means=binned_x_means,
                             binned_y_means=binned_y_means,
                             binned_y_stddev=binned_y_stddev,
+                            binned_y_rms= binned_y_rms,
                             binned_num=self.binned_num,
                             overall_mean=overall_mean,
                             overall_stddev=overall_stddev,

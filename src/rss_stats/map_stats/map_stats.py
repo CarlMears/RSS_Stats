@@ -64,6 +64,16 @@ class MapStat():
         
         return stats
 
+    def empty_like(self):
+        new = MapStat(num_lats = self.num_lats,
+                      num_lons = self.num_lons,
+                      min_lat = self.min_lat,
+                      max_lat = self.max_lat,
+                      min_lon = self.min_lon,
+                      max_lon = self.max_lon)
+        
+        return new
+
     def from_netcdf_triple(nc_file = None,speed_only = False):
         '''Opens a netcdf file and reads U, V, and W maps, each with total and tot_sqr data.
         U data must be named u_tot and u_tot_sqr in the file
