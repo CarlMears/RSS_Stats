@@ -204,6 +204,7 @@ class Hist1D():
                 name='n',
                 rangex = None,
                 rangey = None,
+                scaley = 1.0,
                 title=None, 
                 xtitle=None, 
                 ytitle=None,
@@ -246,7 +247,7 @@ class Hist1D():
         X = np.array([left,right]).T.flatten()
         
 
-        y = self.data[name]
+        y = self.data[name]*scaley
         Y = np.array([y,y]).T.flatten()
 
         if semilog:

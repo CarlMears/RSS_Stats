@@ -226,9 +226,9 @@ class BinnedStat():
 
         with np.errstate(invalid='ignore'):
             z = np.all([(mask < 0.5), (x >= self.xbin_edges[0]), (x <= self.xbin_edges[-1]),(np.isfinite(y))], axis=(0))
-            self.overall_tot = np.sum(y[z])    
-            self.overall_totsqr = np.sum(np.square(y[z]))
-            self.overall_num = float(np.sum(z))
+            self.overall_tot = self.overall_tot + np.sum(y[z])    
+            self.overall_totsqr = self.overall_totsqr + np.sum(np.square(y[z]))
+            self.overall_num = self.overall_num + float(np.sum(z))
         
         #print(self.overall_tot/self.overall_num)
         
@@ -379,7 +379,11 @@ class BinnedStat():
     
         
     def plot(self, yrng=None, xrng=None,xlab='Wind', ylab='Binned Difference', title=' ', panel_label=None,panel_label_loc=[0.05,0.9],
-            requirement=None, plot_num_in_bins=False, num_thres=0, fig_in = None, ax_in = None, fontsize=16, as_percent=False):
+            requirement=None, plot_num_in_bins=False, num_thres=0, fig_in = None, ax_in = None, fontsize=16, as_percent=False,capsize=0,label=None
+        ):
+        '''
+        Plots binned differences and stddevs
+        '''
 
         binned_stats = self.calc_stats()
 
@@ -406,8 +410,8 @@ class BinnedStat():
         else:
             ax = ax_in
         
-        ax.errorbar(xbin[num > num_thres], ybin[num > num_thres], yerr=ystd[num > num_thres], fmt='s', color='blue')
-        ax.errorbar(xbin[num <= num_thres], ybin[num <= num_thres], yerr=ystd[num <= num_thres], fmt='s', color='lightblue')
+        ax.errorbar(xbin[num > num_thres], ybin[num > num_thres], yerr=ystd[num > num_thres], fmt='s', color='blue',capsize=capsize,label=label)
+        ax.errorbar(xbin[num <= num_thres], ybin[num <= num_thres], yerr=ystd[num <= num_thres], fmt='s', color='lightblue',capsize=capsize)
 
         if yrng is None:
             max = np.floor(np.nanmax([np.nanmax(ybin) + np.nanmax(ystd),-np.nanmin(ybin) + np.nanmax(ystd)]))
@@ -425,8 +429,22 @@ class BinnedStat():
             ax.plot(binned_stats['xrng'], [0.0, 0.0], color='red')
 
         if requirement is not None:
-            ax.plot(xrng, [-requirement, -requirement], color='gray')
-            ax.plot(xrng, [requirement, requirement], color='gray')
+            if np.isscalar(requirement):
+                ax.plot(binned_stats['xrng'], [-requirement, -requirement], color='gray')
+                ax.plot(binned_stats['xrng'], [requirement, requirement], color='gray')
+            else:
+                #if it is not a scalar, we assume that it is a list, with each element
+                #having being a dict range: (lower,upper),requirement:value
+                try:
+                    for segment in requirement:
+                        req_value = segment['value']
+                        ax.plot(segment['range'],[req_value,req_value], color='gray')
+                        ax.plot(segment['range'],[-req_value,-req_value], color='gray')
+                except:
+                    raise ValueError('could not understand requirement')
+
+
+
 
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
             item.set_fontsize(fontsize)
