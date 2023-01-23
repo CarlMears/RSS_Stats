@@ -124,8 +124,14 @@ class Hist2D():
         if  not self.compatible(hist_to_add):
             raise ValueError('histogram to combine not compatible')
 
-        h = hist_to_add.data[name]
-        self.add(h)
+        if name == 'ALL':
+            name_list = list(self.data.data_vars.keys())
+        else:
+            name_list = [name]
+        
+        for name_to_do in name_list:
+            h = hist_to_add.data[name_to_do]
+            self.add(h,name=name_to_do)
         
         return self
 
@@ -144,6 +150,39 @@ class Hist2D():
         # because num_bins and ranges are from self, the resulting hist_to_add is automatically compatible.
         self.add(hist_to_add,name)
 
+    def to_1D(self,name='n',axis_to_sum='x'):
+        # converts 2D array to 1D array by summing along one of the axes
+        from rss_stats.hist_1d import Hist1D
+
+        if axis_to_sum.lower() == 'x':
+            hist1d = np.sum(self.data[name].values,axis=0)
+            num_bins = self.num_ybins
+            min_val = self.min_yval
+            max_val = self.max_yval
+            units = self.yunits
+        
+           
+        elif axis_to_sum.lower() == 'y':
+            hist1d = np.sum(self.data[name].values,axis=1)
+            num_bins = self.num_xbins
+            min_val = self.min_xval
+            max_val = self.max_xval
+            units = self.xunits
+
+        else:
+            raise ValueError('axis to sum must be x or y')
+ 
+        h = Hist1D(num_xbins=num_bins,
+                          min_xval = min_val,
+                          max_xval = max_val,
+                          units=units,
+                          name = name)
+
+        h.add(hist1d,name=name)
+
+        return h
+
+
     def to_netcdf_old(self,filename = None):
         ''' writes histogram to a netcdf file'''
 
@@ -151,7 +190,7 @@ class Hist2D():
 
         self.data.to_netcdf(path  = filename)
 
-    def to_netcdf(self,*,ncfilename):
+    def to_netcdf(self,*,ncfilename,name='ALL'):
         ''' writes histogram to a netcdf file'''
 
         from netCDF4 import Dataset as netcdf_dataset
@@ -173,14 +212,22 @@ class Hist2D():
 
         ybin_edges    = root_grp.createVariable('ybin_edges','f4',('ybin_edges',)) 
 
-        n = root_grp.createVariable('n','f8',('ybin_centers','xbin_centers',))
+        if name == 'ALL':
+            name_list = list(self.data.data_vars.keys())
+        else:
+            name_list = [name]
+
+        var_arr = []
+        for name_to_do in name_list:
+            var_arr.append(root_grp.createVariable(name_to_do,'f8',('ybin_centers','xbin_centers',)))
 
         xbin_centers[:] = self.xcenters
         xbin_edges[:] = self.xedges
         ybin_centers[:] = self.ycenters
         ybin_edges[:] = self.yedges
 
-        n[:,:] = self.data['n'].values
+        for ivar,name_to_do in enumerate(name_list):
+            var_arr[ivar][:,:] = self.data[name_to_do].values
 
         root_grp.close()
 
@@ -247,7 +294,8 @@ class Hist2D():
              rangex = None,rangey= None,num_scale=10000.0,reduce_max = 1.0,
              fig_in = None,ax_in = None,norm='Log',cmap = 'ocean_r',plt_colorbar=True,
              fontsize=16,return_im=False,
-             panel_label=None,panel_label_loc=[0.07,0.9]):
+             panel_label=None,panel_label_loc=[0.07,0.9],
+             transpose=False):
 
         if xtitle is None:
             xtitle = self.xname
@@ -266,7 +314,28 @@ class Hist2D():
             rangey = 100.0*np.array(rangey)
             edge_factor=100.0
 
-        return plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
+        if transpose:
+            return plot_2d_hist(np.transpose(self.data[name].values), self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
+                                    title=title, xtitle=xtitle, ytitle=ytitle, 
+                                    x_range=rangex,
+                                    y_range=rangey, 
+                                    num_scale=num_scale,
+                                    reduce_max=reduce_max,
+                                    aspect=aspect, 
+                                    plot_diagonal=plot_diagonal,
+                                    plot_horiz_medians=plot_horiz_medians,
+                                    plot_vert_medians = plot_vert_medians,
+                                    fig_in = fig_in,
+                                    ax_in = ax_in,
+                                    norm=norm,
+                                    cmap = cmap,
+                                    plt_colorbar=plt_colorbar,
+                                    fontsize=fontsize,
+                                    return_im = return_im,
+                                    panel_label=panel_label,
+                                    panel_label_loc=panel_label_loc)
+        else:
+            return plot_2d_hist(self.data[name].values, self.data.attrs['hist_2d_xedges']*edge_factor , self.data.attrs['hist_2d_yedges']*edge_factor , 
                                 title=title, xtitle=xtitle, ytitle=ytitle, 
                                 x_range=rangex,
                                 y_range=rangey, 

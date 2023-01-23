@@ -2,6 +2,7 @@
 import numpy as np
 from numpy.random.mtrand import noncentral_chisquare
 import xarray as xr 
+from astropy import modeling
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
@@ -12,29 +13,30 @@ class Hist1D():
         self.num_xbins = num_xbins
         self.min_xval = min_xval
         self.max_xval = max_xval
-        self.name = name
+        self.names = []
         self.units = units
         self.size_xbin = (self.max_xval - self.min_xval)/self.num_xbins
 
         xedges = self.min_xval + np.arange(0,self.num_xbins+1)*self.size_xbin
         xcenters = 0.5*(xedges[0:num_xbins]+xedges[1:self.num_xbins+1])
         
-        if name is None:
-            name = 'n'
-
         if no_var:
             self.data = xr.Dataset(
                 coords = {'xedges'   : xedges,
                         'xcenters' : xcenters}) 
         else:
+            if name is None:
+                name = 'n'
+            self.names = [name]
             self.data = xr.Dataset(
-                data_vars = {'n' : (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))},
+                data_vars = {name : (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))},
                 coords = {'xedges'   : xedges,
                         'xcenters' : xcenters}) 
 
     def add_data_var(self,name=None):
         if name is not None:
             self.data[name] = (('xcenters'),np.zeros((self.num_xbins),dtype = np.float32))
+            self.names.append(name)
 
     def get_cumulative(self,name='n'):
 
@@ -104,19 +106,25 @@ class Hist1D():
 
         return hist_compatible
 
-    def combine(self,self2,name='n',name2 = 'n'):
+    def combine(self,self2,name='n'):
 
         #make sure histograms are compatible
-        # try:
-        #     hists_compatible = self.compatible(self2)
+        hists_compatible = self.compatible(self2)
         # except:
         #     raise ValueError('Hist1D compatible failed, can not combine')
 
-        # if not hists_compatible:
-        #     raise ValueError('Hist1D objects not compatible, can not combine')
+        if not hists_compatible:
+             raise ValueError('Hist1D objects not compatible, can not combine')
+        
+        if name == 'ALL':
+            name_list = self.names
+        else:
+            name_list = [name]
+        for name_to_do in name_list:
+            hist_to_add = self2.data[name_to_do]
+            self.add(hist_to_add,name=name_to_do)
 
-        hist_to_add = self2.data[name2]
-        self.add(hist_to_add,name=name)
+        return self
 
     def scale_values(self,name='n',scale_factor=1.0):
 
@@ -199,6 +207,27 @@ class Hist1D():
 
         return x1,z1
 
+    def fit_gaussian(self,name='n',mean_guess=None,sigma_guess=None,truncate=None):
+
+        fitter = modeling.fitting.LevMarLSQFitter()
+        model = modeling.models.Gaussian1D(mean = mean_guess,stddev=sigma_guess)
+        fitted_model = fitter(model, self.data.coords['xcenters'],self.data[name])
+        return fitted_model
+
+    def calculate_mean(self,name='n'):
+
+        mean = np.nansum(self.data[name]*self.data.coords['xcenters'])/np.nansum(self.data[name])
+        return mean
+
+    def calculate_stddev(self,name='n'):
+
+        mean = self.calculate_mean(name=name)
+        variance = np.nansum(self.data[name]*np.square(self.data.coords['xcenters']-mean))/np.nansum(self.data[name])
+        stddev = np.sqrt(variance)
+        return stddev
+
+
+
     def plot(self, fig = None, 
                 ax = None, 
                 name='n',
@@ -210,9 +239,11 @@ class Hist1D():
                 ytitle=None,
                 label=' ',
                 semilog=False,
+                normalize=False,
                 fontsize=16,
                 panel_label=None,
-                panel_label_loc=[0.04,0.92]):
+                panel_label_loc=[0.04,0.92],
+                plt_legend=False):
 
 
         # if label is None:
@@ -221,7 +252,12 @@ class Hist1D():
         if xtitle is None:
             xtitle = self.units
         if ytitle is None:
-            ytitle = 'Number of Obs'
+            if normalize:
+                ytitle_to_use = 'Fraction of Observations'
+            else:
+                ytitle_to_use = 'Number of Observations'
+        else:
+            ytitle_to_use = ytitle
         if title is None:
             title = ''
 
@@ -235,8 +271,8 @@ class Hist1D():
             ax.set_title(title)
         if xtitle is not None:
             ax.set_xlabel(xtitle)
-        if ytitle is not None:
-            ax.set_ylabel(ytitle)
+        if ytitle_to_use is not None:
+            ax.set_ylabel(ytitle_to_use)
 
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
             item.set_fontsize(fontsize)
@@ -246,6 +282,9 @@ class Hist1D():
         left,right = self.data['xedges'][:-1],self.data['xedges'][1:]
         X = np.array([left,right]).T.flatten()
         
+        if normalize:
+            scaley = 1.0/np.sum(self.data[name])
+            
 
         y = self.data[name]*scaley
         Y = np.array([y,y]).T.flatten()
@@ -262,13 +301,14 @@ class Hist1D():
 
         if rangey is None:
             if semilog:
-                ax.set_ylim(10.0,2.0*np.nanmax(y))
+                ax.set_ylim(0.001*np.nanmax(y),2.0*np.nanmax(y))
             else:
                 ax.set_ylim(0.0,1.2*np.nanmax(y))
         else:
             ax.set_ylim(rangey[0],rangey[1])
         
-        ax.legend(loc='best',fontsize=10)
+        if plt_legend:
+            ax.legend(loc='best',fontsize=10)
 
         if panel_label is not None:
             plt.text(panel_label_loc[0],panel_label_loc[1],panel_label,transform=ax.transAxes,fontsize=16)

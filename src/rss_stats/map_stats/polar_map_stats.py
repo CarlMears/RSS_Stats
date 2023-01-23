@@ -2,7 +2,7 @@ from rss_plotting.polar_map import plot_polar_stereographic
 import numpy as np
 import xarray as xr
 from scipy.stats import binned_statistic_2d
-from polar_grids import polarstereo_inv
+from polar_stereo import polarstereo_inv
 
 class PolarMapStat:
     ''' 
@@ -265,7 +265,7 @@ class PolarMapStat:
         '''Combine data from second PolarMapStat object into self'''
 
         keys = dict(self.data).keys()
-        keys2 = dict(self.data).keys()
+        keys2 = dict(self2.data).keys()
         common_keys = set(keys) & set(keys2)
         for unneeded_key in ['Latitude','Longitude','X','Y']:
             if unneeded_key in common_keys:
@@ -277,12 +277,14 @@ class PolarMapStat:
                 print(f'Combining Map for channel {chan}')
             self.data[chan] += self2.data[chan]
 
-    def num_obs(self):
+        return self
+
+    def num_obs(self,map_name):
         '''Return map of number of observations'''
         if self.type_map:
             return np.sum(self.data[map_name],axis=2)
         else:
-            return self.data[map_name][0,:,:]
+            return self.data[map_name][:,:,0].values
 
 
     def mean(self,map_name):
@@ -305,9 +307,11 @@ class PolarMapStat:
         if stat=='mean':
             stat_to_plot = self.mean(map_name)
             fig = plot_polar_stereographic(stat_to_plot,zrange=zrange,title=title,units=units,coast_color=coast_color,pole=self.pole,cmap=cmap)
-            
+        elif stat=='num':
+            stat_to_plot = self.num_obs(map_name)
+            fig = plot_polar_stereographic(stat_to_plot,zrange=zrange,title=title,units=units,coast_color=coast_color,pole=self.pole,cmap=cmap)
         else:
-            raise ValueError('Unsupported stat, supported stats: mean')
+            raise ValueError('Unsupported stat, supported stats: mean, num')
         return fig
 
     #def variance(self):
